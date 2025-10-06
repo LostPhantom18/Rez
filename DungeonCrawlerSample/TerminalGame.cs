@@ -1,4 +1,6 @@
-﻿namespace MohawkTerminalGame
+﻿using DungeonCrawlerSample;
+
+namespace MohawkTerminalGame
 {
     public class TerminalGame
     {
@@ -13,6 +15,8 @@
         int oldPlayerY;
         int playerX = 5;
         int playerY = 0;
+
+        BossAI boss = new BossAI();
 
         /// Run once before Execute begins
         public void Setup()
@@ -62,6 +66,22 @@
             Terminal.SetCursorPosition(0, 12);
             Terminal.ResetColor();
             Terminal.Write(Time.DisplayText);
+
+            if (Input.IsKeyPressed(ConsoleKey.H))
+            {
+                //boss.TestAttack(map, riverEW);
+                map.Poke(2, 5, boss.warning);
+            }
+
+            if (Input.IsKeyPressed(ConsoleKey.G))
+            {
+                map.Poke(2, 5, boss.attack);
+            }
+
+            if (Input.IsKeyPressed(ConsoleKey.R))
+            {
+                map.Poke(2, 5, map.Get(2, 5));
+            }
         }
 
         void CheckMovePlayer()
