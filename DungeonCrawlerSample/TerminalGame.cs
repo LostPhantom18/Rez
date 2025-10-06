@@ -65,22 +65,29 @@ namespace MohawkTerminalGame
             // Write time below game
             Terminal.SetCursorPosition(0, 12);
             Terminal.ResetColor();
-            Terminal.Write(Time.DisplayText);
+            Terminal.ForegroundColor = ConsoleColor.Black;
+            // Terminal.Write(Time.DisplayText);
 
             if (Input.IsKeyPressed(ConsoleKey.H))
             {
                 //boss.TestAttack(map, riverEW);
                 map.Poke(2, 5, boss.warning);
+                map.Poke(2, 6, boss.warning);
+                map.Poke(2, 7, boss.warning);
             }
 
             if (Input.IsKeyPressed(ConsoleKey.G))
             {
                 map.Poke(2, 5, boss.attack);
+                map.Poke(2, 6, boss.attack);
+                map.Poke(2, 7, boss.attack);
             }
 
             if (Input.IsKeyPressed(ConsoleKey.R))
             {
                 map.Poke(2, 5, map.Get(2, 5));
+                map.Poke(2, 6, map.Get(2, 5));
+                map.Poke(2, 7, map.Get(2, 5));
             }
         }
 
