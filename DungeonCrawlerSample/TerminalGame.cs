@@ -22,7 +22,7 @@
             Program.TerminalInputMode = TerminalInputMode.EnableInputDisableReadLine;
             Program.TargetFPS = 60;
             // Prepare some terminal settings
-            Terminal.SetTitle("Dungeon Crawler Sample");
+            Terminal.SetTitle("REZ");
             Terminal.CursorVisible = false; // hide cursor
 
             // Set map to some values
@@ -58,8 +58,6 @@
                 inputChanged = false;
             }
 
-            map.SetCircle(new(@"@", ConsoleColor.Cyan, ConsoleColor.Red), 5, 5, 5);
-
             // Write time below game
             Terminal.SetCursorPosition(0, 12);
             Terminal.ResetColor();
@@ -73,13 +71,13 @@
             oldPlayerX = playerX;
             oldPlayerY = playerY;
 
-            if (Input.IsKeyPressed(ConsoleKey.RightArrow))
+            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D))
                 playerX++;
-            if (Input.IsKeyPressed(ConsoleKey.LeftArrow))
+            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A))
                 playerX--;
-            if (Input.IsKeyPressed(ConsoleKey.DownArrow))
+            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S))
                 playerY++;
-            if (Input.IsKeyPressed(ConsoleKey.UpArrow))
+            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W))
                 playerY--;
 
             playerX = Math.Clamp(playerX, 0, map.Width - 1);
