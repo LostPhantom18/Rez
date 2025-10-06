@@ -58,6 +58,8 @@
                 inputChanged = false;
             }
 
+            map.SetCircle(new(@"@", ConsoleColor.Cyan, ConsoleColor.Red), 5, 5, 5);
+
             // Write time below game
             Terminal.SetCursorPosition(0, 12);
             Terminal.ResetColor();
