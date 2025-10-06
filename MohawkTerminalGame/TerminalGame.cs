@@ -1,5 +1,7 @@
 ﻿namespace MohawkTerminalGame;
 
+// Team #2
+
 public class TerminalGame
 {
     // Place your variables here
