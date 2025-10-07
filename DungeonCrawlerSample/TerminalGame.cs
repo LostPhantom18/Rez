@@ -1,20 +1,48 @@
-﻿using DungeonCrawlerSample;
+using DungeonCrawlerSample;
+using System;
 
 namespace MohawkTerminalGame
 {
     public class TerminalGame
     {
-        // Place your variables here
-        TerminalGridWithColor map;
-        ColoredText tree = new(@"/\", ConsoleColor.Green, ConsoleColor.DarkGreen);
-        ColoredText riverNS = new(@"||", ConsoleColor.Blue, ConsoleColor.DarkBlue);
-        ColoredText riverEW = new(@"==", ConsoleColor.Blue, ConsoleColor.DarkBlue);
-        ColoredText player = new(@"😎", ConsoleColor.White, ConsoleColor.Black);
+        // ─────────────────────────────────────────────────────────────────────
+        // SETTINGS WE WILL TWEAK IN THE GAME
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Each cell is made only using two things, the · and • 
+        const int CELL_W = 2;
+
+        // Outer grid is the one highlighted brighter and will change throughout the game while inner grid will always be 3
+        const int OUTER_GRID = 5; // number of big tiles 
+        const int INNER_GRID = 3; // number of mini-cells inside of each big tile
+
+        // Map size OUTER_GRID * INNER_GRID (+1 because for some reason it displays one less)
+        const int MAP_WIDTH = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
+        const int MAP_HEIGHT = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
+
+        // Dot colors (console only supports 16 colors theres no way for hexidecimals; grayscale is fastest and looks the best imo)
+        readonly ConsoleColor MACRO_DOT_COLOR = ConsoleColor.Gray; // Big tile lines
+        readonly ConsoleColor MICRO_DOT_COLOR = ConsoleColor.DarkGray; // Inner 3×3 lines
+        readonly ConsoleColor FLOOR_FG = ConsoleColor.Black;
+        readonly ConsoleColor FLOOR_BG = ConsoleColor.Black; // Dark background
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GAME RUNTIME STATE
+        // ─────────────────────────────────────────────────────────────────────
+
+        TerminalGridWithColor map = null!; // The 2D array we are drawing into, then rendering
+
+        // Floor tile which is two columns wide to make the board look nice and even
+        ColoredText floorTile = null!;
+
+        // Player
+        ColoredText player = new("💀", ConsoleColor.White, ConsoleColor.Black);
+
+        // Input recording so we only need to redraw when neccessary
         bool inputChanged;
-        int oldPlayerX;
-        int oldPlayerY;
-        int playerX = 5;
-        int playerY = 0;
+        int oldPlayerX, oldPlayerY;
+        int playerX = MAP_WIDTH / 2; // Start in center (no real center cause its 15x15)
+        int playerY = MAP_HEIGHT / 2;
 
         int counter;
         int counter2;
@@ -23,25 +51,37 @@ namespace MohawkTerminalGame
 
         BossAI boss = new BossAI();
 
+        // ─────────────────────────────────────────────────────────────────────
+        // ENGINE STUFF
+        // ─────────────────────────────────────────────────────────────────────
+
         /// Run once before Execute begins
         public void Setup()
         {
-            // Run program at timed intervals.
+            // Run the game steady by using the timer loop (made by raph)
             Program.TerminalExecuteMode = TerminalExecuteMode.ExecuteTime;
             Program.TerminalInputMode = TerminalInputMode.EnableInputDisableReadLine;
             Program.TargetFPS = 60;
-            // Prepare some terminal settings
-            Terminal.SetTitle("REZ");
-            Terminal.CursorVisible = false; // hide cursor
 
-            // Set map to some values
-            map = new(10, 10, tree);
-            // map.SetCol(riverNS, 3);
-            // map.SetRow(riverEW, 8);
+            // Making the console perty
+            Terminal.SetTitle("Wizard Tower");
+            Terminal.CursorVisible = false;
+            Terminal.BackgroundColor = FLOOR_BG;
 
-            // Clear window and draw map
+            // Build a new 15×15 grid (each cell makes two columns)
+            floorTile = new ColoredText("  ", FLOOR_FG, FLOOR_BG);
+            map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
+
+            // Make floor
+            BuildFloor();
+
+            // Drawing the grid lines onto screen
+            DrawGridLines();
+
+            // Rendering
             map.ClearWrite();
-            // Draw player. x2 because my tileset is 2 columns wide.
+
+            // Put player on top 
             DrawCharacter(playerX, playerY, player);
 
             counter = -60;
@@ -50,36 +90,28 @@ namespace MohawkTerminalGame
             y2 = 0;
         }
 
-        // Execute() runs based on Program.TerminalExecuteMode (assign to it in Setup).
-        //  ExecuteOnce: runs only once. Once Execute() is done, program closes.
-        //  ExecuteLoop: runs in infinite loop. Next iteration starts at the top of Execute().
-        //  ExecuteTime: runs at timed intervals (eg. "FPS"). Code tries to run at Program.TargetFPS.
-        //               Code must finish within the alloted time frame for this to work well.
         public void Execute()
         {
-            // Move player
+            // Does input and move player one cell at a time using WASD or the arrows
             CheckMovePlayer();
 
-            // Naive approach, works but it's much but slower
-            //map.Overwrite(0,0);
-            //map.Poke(playerX * 2, playerY, player);
-
-            // Only move player if needed
             if (inputChanged)
             {
+                // Make sure to replace what was under the old player like the floor and dots and stuff
                 ResetCell(oldPlayerX, oldPlayerY);
+                // Then put player in new spot
                 DrawCharacter(playerX, playerY, player);
                 inputChanged = false;
             }
 
-            // Write time below game
-            Terminal.SetCursorPosition(0, 12);
+            // Basic HUD will be changed for sure
+            Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
             Terminal.ResetColor();
             Terminal.ForegroundColor = ConsoleColor.Black;
             // Terminal.Write(Time.DisplayText);
 
             // Boss warning
-            if (counter % 3 == 0 && counter >- 0 && y < map.Height)
+            if (counter % 3 == 0 && counter > -0 && y < map.Height)
             {
                 BossAttackSpike(2, y, boss.warning);
                 y++;
@@ -94,7 +126,7 @@ namespace MohawkTerminalGame
 
             // Reset boss attack tiles
             if (counter2 >= 45)
-            {                
+            {
                 for (int y = 0; y < map.Height; y++)
                 {
                     ResetBossAttacks(2, y);
@@ -103,6 +135,8 @@ namespace MohawkTerminalGame
 
             counter++;
             counter2++;
+
+            Terminal.Write($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
         }
 
         void BossAttackSpike(int x, int y, ColoredText emoji)
@@ -113,41 +147,105 @@ namespace MohawkTerminalGame
         void ResetBossAttacks(int x, int y)
         {
             map.Poke(x, y, map.Get(x, y));
+        }        
+
+        // ─────────────────────────────────────────────────────────────────────
+        // BUILDING THE STATIC BACKGROUND
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Just makes the floor
+        void BuildFloor()
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+                for (int x = 0; x < MAP_WIDTH; x++)
+                    map.SetRectangle(floorTile, x, y, 1, 1);
         }
+
+        void DrawGridLines()
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                for (int x = 0; x < MAP_WIDTH; x++)
+                {
+                    // Outer lines between small tiles
+                    bool isOuterLine = (x % INNER_GRID == 0 && x != 0 && x != MAP_WIDTH) || (y % INNER_GRID == 0 && y != 0 && y != MAP_HEIGHT);
+
+                    // Inner lines inside the outer lines 3x3
+                    int xInOuter = x % INNER_GRID;
+                    int yInOuter = y % INNER_GRID;
+                    bool isInnerLine = (xInOuter != 0) || (yInOuter != 0);
+
+                    // Edge highlight (what you asked for): brighten TOP and LEFT edges
+                    bool isEdgeHighlight = (x == 0) || (y == 0);
+
+                    // Decide if we draw here
+                    bool drawDot = isEdgeHighlight || isOuterLine || isInnerLine;
+
+                    if (!drawDot)
+                    {
+                        continue; // If draw dot not applicable then skip the rest of the code
+                    }
+
+                    var under = map.Get(x, y);
+
+                    // If its highlighted or is the outerline 
+                    if (isEdgeHighlight || isOuterLine)
+                    {
+                        map.SetRectangle(new ColoredText("• ", MACRO_DOT_COLOR, under.bgColor), x, y, 1, 1);
+                    }
+                    // Must be inner line then
+                    else
+                    {
+                        map.SetRectangle(new ColoredText("· ", MICRO_DOT_COLOR, under.bgColor), x, y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // INPUT / MOVEMENT
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Player movement stuff made by Isaac
         void CheckMovePlayer()
-        {
-            //
-            inputChanged = false;
-            oldPlayerX = playerX;
-            oldPlayerY = playerY;
+    {
+        inputChanged = false;
+        oldPlayerX = playerX;
+        oldPlayerY = playerY;
 
-            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
-            if (Input.IsKeyPressed(ConsoleKey.LeftArrow)  || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
-            if (Input.IsKeyPressed(ConsoleKey.DownArrow)  || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
-            if (Input.IsKeyPressed(ConsoleKey.UpArrow)    || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
+        if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
+        if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
+        if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
+        if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
-            playerX = Math.Clamp(playerX, 0, map.Width - 1);
-            playerY = Math.Clamp(playerY, 0, map.Height - 1);
+        playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
+        playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
 
-            if (oldPlayerX != playerX || oldPlayerY != playerY)
-                inputChanged = true;
-        }
-
-        void DrawCharacter(int x, int y, ColoredText character)
-        {
-            ColoredText mapTile = map.Get(x, y);
-            // Copy BG color. This assumes emoji.
-            player.bgColor = mapTile.bgColor;
-            // Character (eg. player) and grid are 2-width characters
-            map.Poke(x * 2, y, player);
-        }
-
-        void ResetCell(int x, int y)
-        {
-            ColoredText mapTile = map.Get(x, y);
-            // Player and grid are 2-width characters
-            map.Poke(x * 2, oldPlayerY, mapTile);
-        }
-
+        if (oldPlayerX != playerX || oldPlayerY != playerY)
+            inputChanged = true;
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // DRAWING HELP
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Raph Code
+    void DrawCharacter(int x, int y, ColoredText character)
+    {
+        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+        var under = map.Get(x, y);           // Read what’s in the backing array
+        character.bgColor = under.bgColor;   // Then match the background
+        map.Poke(x * CELL_W, y, character);  // Draw at the correct screen column
+    }
+
+    // Raph Code
+    void ResetCell(int x, int y)
+    {
+        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+        var tile = map.Get(x, y);
+        map.Poke(x * CELL_W, y, tile);
+    }
+}
 }
