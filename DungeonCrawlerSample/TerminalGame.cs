@@ -1,5 +1,6 @@
 using DungeonCrawlerSample;
 using System;
+using System.Dynamic;
 
 namespace MohawkTerminalGame
 {
@@ -100,6 +101,12 @@ namespace MohawkTerminalGame
             bossAttackY = 0;
             bossAttackY2 = 0;
             RandomizeBossX();
+
+            swordParts[0] = gem;
+            swordParts[1] = shield;
+            swordParts[2] = sword;
+
+            nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
         }
 
         public void Execute()
@@ -115,6 +122,8 @@ namespace MohawkTerminalGame
                 DrawCharacter(playerX, playerY, player);
                 inputChanged = false;
             }
+
+            SwordPartsTick();
 
             // Basic HUD will be changed for sure
             // Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
@@ -243,5 +252,69 @@ namespace MohawkTerminalGame
             var tile = map.Get(x, y);
             map.Poke(x * CELL_W, y, tile);
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // SWORD SPAWNING SYSTEM
+        // ─────────────────────────────────────────────────────────────────────
+
+        int swordTimer = 0; // Counts frames (converts to seconds)                
+        int nextSwordSpawn = 0; // Frames (seconds) until next spawn
+        int swordX = -1; // Cell position -1 just off the map 
+        int swordY = -1; // Cell position -1 just off the map     
+        ColoredText currentSword = null!; // Which emoji is spawned (while the current item is not nothing)
+
+        ColoredText[] swordParts = new ColoredText[3]; // Array for emojis (sword parts)
+        int swordIndex = 0; // To know what part of the sword you are on
+
+        void SwordPartsTick()
+        {
+            // If a part is on the map then make it and allow it to be picked up
+            if (swordX != -1)
+            {
+                
+                // EAch cell is two collumns wide
+                map.Poke(swordX * CELL_W, swordY, currentSword);
+
+                // Pick it up when the player is on it
+                if (playerX == swordX && playerY == swordY)
+                {
+                    ResetCell(swordX, swordY);  // Reset it to original .
+                    swordX = -1; // Cell position back to -1 just off the map
+                    swordY = -1; // Cell position back to -1 just off the map
+
+                    swordIndex++; // +1 to swordIndex for next sword part
+
+                    if (swordIndex >= swordParts.Length)
+                    {
+                        swordIndex = 0;
+                    }
+                }
+
+                return; // Dont allow the timer to go when the sword part is on the grid
+            }
+
+            // No part active so count up every frame
+            swordTimer++;
+
+            // If the swordTimer is greater than or equal to the nextSwordSpawn time that is randomized from 10, 20 sec 
+            if (swordTimer >= nextSwordSpawn)
+            {
+                currentSword = swordParts[swordIndex];
+
+                // Pick a random tile on the map
+                swordX = Random.Integer(0, MAP_WIDTH);
+                swordY = Random.Integer(0, MAP_HEIGHT);
+
+
+                // Reset the timer back to 0 to start the counter over again
+                swordTimer = 0;
+                nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            }
+        } 
+
     }
+
+
+
+
 }
