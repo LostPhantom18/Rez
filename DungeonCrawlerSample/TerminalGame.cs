@@ -44,10 +44,10 @@ namespace MohawkTerminalGame
         ColoredText sword = new(@"⚔️", ConsoleColor.White, ConsoleColor.Black);
 
         // --- Boss ---
-        public ColoredText warning = new(@"⚠️", ConsoleColor.Yellow, ConsoleColor.Black);
-        public ColoredText spike = new(@"💥", ConsoleColor.Red, ConsoleColor.Black);
-        public ColoredText lightning = new(@"⚡", ConsoleColor.Yellow, ConsoleColor.Black);
-        public ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.Black);
+        ColoredText warning = new(@"⚠️", ConsoleColor.Yellow, ConsoleColor.Black);
+        ColoredText spike = new(@"💥", ConsoleColor.Red, ConsoleColor.Black);
+        ColoredText lightning = new(@"⚡", ConsoleColor.Yellow, ConsoleColor.Black);
+        ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.Black);
 
         // Input recording so we only need to redraw when neccessary
         bool inputChanged;
@@ -55,12 +55,18 @@ namespace MohawkTerminalGame
         int playerX = MAP_WIDTH / 2; // Start in center (no real center cause its 15x15)
         int playerY = MAP_HEIGHT / 2;
 
-        // Temp boss code
-        int counter;
-        int counter2;
-        int bossAttackY;
-        int bossAttackY2;
-        int bossAttackX;
+        // ─────────────────────────────────────────────────────────────────────
+        // BOSS AI STORAGE
+        // ─────────────────────────────────────────────────────────────────────
+
+        int bossWarningCounter;  // Counter for warning parts of attacks
+        int bossAttackCounter;   // Counter for attackinf parts of attacks
+
+        int bossWarningRow;      // Warning row (the 'Y' value)
+        int bossAttackRow;       // Attack row (the 'Y' value)
+        int bossAttackCol;       // Attack column (the 'X' value)
+
+        bool isBossAttacking;
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -95,11 +101,11 @@ namespace MohawkTerminalGame
             // Put player on top 
             DrawCharacter(playerX, playerY, player);
 
-            counter = -Program.TargetFPS;
-            counter2 = -Program.TargetFPS * 2;
-            bossAttackY = 0;
-            bossAttackY2 = 0;
-            RandomizeBossX();
+            bossWarningCounter = -Program.TargetFPS;
+            bossAttackCounter = -Program.TargetFPS * 2;
+            bossWarningRow = 0;
+            bossAttackRow = 0;
+            RandomizeBossColumn();
         }
 
         public void Execute()
@@ -126,37 +132,49 @@ namespace MohawkTerminalGame
             // BOSS ATTACK CODE LOOPS
             // ─────────────────────────────────────────────────────────────────────
 
+            // Boss choosing what attack to do
+            // Check if the boss can attack
+            
+            // Dev button for boss attack toggles
+            if (Input.IsKeyDown(ConsoleKey.H))
+            {
+                isBossAttacking = true;
+            }
+
             // Boss warning
             // Scuffed hardcoded timer code in the if
             // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (counter % 3 == 0 && counter > -0 && bossAttackY < map.Height)
+            if (bossWarningCounter % 2 == 0 && bossWarningCounter > 0 && bossWarningRow < map.Height)
             {
-                BossAttackSpike(bossAttackX, bossAttackY, warning);
-                bossAttackY++;
+                BossAttackSpike(bossAttackCol, bossWarningRow, warning);
+                bossWarningRow++;
             }
 
             // Boss attack
             // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (counter2 % 3 == 0 && counter2 >= 0 && bossAttackY2 < map.Height)
+            if (bossAttackCounter % 2 == 0 && bossAttackCounter >= 45 && bossAttackRow < map.Height)
             {
-                BossAttackSpike(bossAttackX, bossAttackY2, spike);
-                bossAttackY2++;
+                BossAttackSpike(bossAttackCol, bossAttackRow, spike);
+                bossAttackRow++;
             }
 
             // Reset boss attack tiles
             // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (counter2 >= Program.TargetFPS)
+            if (bossAttackCounter >= 80)
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    ResetBossAttacks(bossAttackX, y);
+                    ResetBossAttacks(bossAttackCol, y);
                 }
-                RandomizeBossX();
+                RandomizeBossColumn();
             }
 
             // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            counter++;
-            counter2++;
+            if (isBossAttacking)
+            {
+                bossWarningCounter++;
+                bossAttackCounter++;
+            }
 
             // ─────────────────────────────────────────────────────────────────────
             // DISPLAY
@@ -183,19 +201,18 @@ namespace MohawkTerminalGame
         {
             map.Poke(x, y, map.Get(x / 2, y));
             // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            counter = -60;
-            counter2 = -120;
-            bossAttackY = 0;
-            bossAttackY2 = 0;
+            bossWarningCounter = 0;
+            bossAttackCounter = 0;
+            bossWarningRow = 0;
+            bossAttackRow = 0;
+            isBossAttacking = false;
         }
 
         // Randomize boss attack position
-        // Still kinda scuffed, should be fixed when attacks are modular
-        // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-        void RandomizeBossX()
+        void RandomizeBossColumn()
         {
-            // MAP_WIDTH * 2 because emojis are 2-wide characters
-            bossAttackX = Random.Integer(0, MAP_WIDTH) * 2;
+            // Multiply by 2 because emojis are 2-wide characters
+            bossAttackCol = Random.Integer(0, MAP_WIDTH) * 2;
         }
 
         // ─────────────────────────────────────────────────────────────────────
