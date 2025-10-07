@@ -1,4 +1,5 @@
 using DungeonCrawlerSample;
+using DungeonCrawlerSample.MohawkTerminalGame.NewClasses;
 using System;
 
 namespace MohawkTerminalGame
@@ -109,6 +110,7 @@ namespace MohawkTerminalGame
             // Set up boss attacks
             RandomizeBossColumn();
             RandomizeBossRow();
+            isSpikeVertical = true;
         }
 
         public void Execute()
@@ -146,10 +148,13 @@ namespace MohawkTerminalGame
                 // Randomize what attack the boss is going to use
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
                 //int attackToUse = Random.Integer(0, 3); 
-                int attackToUse = 2;
+                int attackToUse = 0;
                 if (attackToUse == 0) currentAttack = "spike";
                 if (attackToUse == 1) currentAttack = "lightning";
                 if (attackToUse == 2) currentAttack = "wave";
+
+                // Determine which direction to shoot the spikes
+                isSpikeVertical = Random.CoinFlip();
             }
 
             // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
@@ -157,15 +162,14 @@ namespace MohawkTerminalGame
             if (currentAttack == "spike")
             {
                 /**
-                 * Attack steps:
+                 * Attack Steps:
                  * 1. Coin flip to choose vertical or horizontal spike line
+                 *    Spike line is 3 columns wide
                  * 2. Warn where the spikes will show up
                  * 3. Spikes show up in warning spots
                  * 4. Randomize where the next attack will happen
                  * 5. Reset the tiles affected and boss attacking state
                  */
-                // Determine which direction to shoot the spikes
-                isSpikeVertical = Random.CoinFlip();
 
                 // Boss SPIKE ATTACK - VERTICAL
                 if (isSpikeVertical)
@@ -173,29 +177,38 @@ namespace MohawkTerminalGame
                     // Boss warning
                     if (bossWarningCounter % 2 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                     {
-                        BossAttackSpike(bossAttackColPos, bossWarningRow, warning);
+                        // Warn the left row, selected row, and right row
+                        if (bossAttackColPos >= 2) BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
+                        BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
+                        if (bossAttackColPos <= (map.Width - 2) * 2 - 2) BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
                         bossWarningRow++;
                     }
 
                     // Boss attack
                     if (bossAttackCounter >= 45 && bossAttackRow < map.Height)
                     {
-                        BossAttackSpike(bossAttackColPos, bossAttackRow, spike);
+                        // Attack the left row, selected row, and right row
+                        if (bossAttackColPos >= 2) BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike);
+                        BossAttackEmoji(bossAttackColPos, bossAttackRow, spike);
+                        if (bossAttackColPos <= (map.Width - 2) * 2 - 2) BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike);
                         bossAttackRow++;
                     }
 
                     // Reset boss attack tiles
-                    if (bossAttackCounter >= 80)
+                    if (bossAttackCounter >= 70)
                     {
                         for (int y = 0; y < map.Height; y++)
                         {
-                            ResetBossSpikeAttack(bossAttackColPos, y);
+                            // Reset the left row, selected row, and right row
+                            if (bossAttackColPos >= 2) ResetBossAttackTiles(bossAttackColPos - 2, y);
+                            ResetBossAttackTiles(bossAttackColPos, y);
+                            if (bossAttackColPos <= (map.Width - 2) * 2 - 2) ResetBossAttackTiles(bossAttackColPos + 2, y);
                         }
                         RandomizeBossColumn();
                         ResetBossAttackingState();
                     }
 
-                    // Increase counters while the boss is using an attack
+                    // Increase time counter while the boss is using an attack
                     if (isBossAttacking)
                     {
                         bossAttackCounter++;
@@ -207,29 +220,38 @@ namespace MohawkTerminalGame
                     // Boss warning
                     if (bossWarningCounter % 2 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
                     {
-                        BossAttackSpike(bossWarningCol * 2, bossAttackRowPos, warning);
+                        // Warn the left column, selected column, and right column
+                        if (bossAttackRowPos >= 1) BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning);
+                        BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning);
+                        if (bossAttackRowPos <= map.Height - 1) BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning);
                         bossWarningCol++;
                     }
 
                     // Boss attack
                     if (bossAttackCounter >= 45 && bossAttackCol < map.Width)
                     {
-                        BossAttackSpike(bossAttackCol * 2, bossAttackRowPos, spike);
+                        // Attack the left column, selected column, and right column
+                        if (bossAttackRowPos >= 1) BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike);
+                        BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike);
+                        if (bossAttackRowPos <= map.Height - 1) BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike);
                         bossAttackCol++;
                     }
 
                     // Reset boss attack tiles
-                    if (bossAttackCounter >= 80)
+                    if (bossAttackCounter >= 70)
                     {
                         for (int x = 0; x < map.Width; x++)
                         {
-                            ResetBossSpikeAttack(x * 2, bossAttackRowPos);
+                            // Reset the left column, selected column, and right columny
+                            if (bossAttackRowPos >= 1) ResetBossAttackTiles(x * 2, bossAttackRowPos - 1);
+                            ResetBossAttackTiles(x * 2, bossAttackRowPos);
+                            if (bossAttackRowPos <= map.Height - 1) ResetBossAttackTiles(x * 2, bossAttackRowPos + 1);
                         }
                         RandomizeBossRow();
                         ResetBossAttackingState();
                     }
 
-                    // Increase counters while the boss is using an attack
+                    // Increase time counter while the boss is using an attack
                     if (isBossAttacking)
                     {
                         bossAttackCounter++;
@@ -240,7 +262,15 @@ namespace MohawkTerminalGame
             // Start of Lightning attack
             if (currentAttack == "lightning")
             {
-
+                /**
+                 * Attack Steps:
+                 * 1. Choose which columns to affect (choose 1, then every other for x amount of columns)
+                 *    Lightning is 1 tile wide, but affects 9 rows at every other row
+                 * 2. Warn where the lightning will strike
+                 * 3. Shoot lightning on the warning tiles
+                 * 4. Randomize next attack position
+                 * 5. Reset tiles affected by attack
+                 */
             } // End of Lightning attack
 
             // Start of Wave attack
@@ -251,6 +281,8 @@ namespace MohawkTerminalGame
                  * 1. Choose vertical or horizontal (?)
                  * 2. Warning on the rows or columns that will be affected
                  * 3. Waves on the warnings
+                 * 4. Randomize next attack position
+                 * 5. Reset tiles affected by attack
                  */
             } // End of Wave attack
 
@@ -262,7 +294,8 @@ namespace MohawkTerminalGame
             Terminal.ResetColor();
             Terminal.ForegroundColor = ConsoleColor.White;
             Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
-            Terminal.WriteLine($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
+            Terminal.ClearLine();
+            Terminal.Write($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
             Terminal.SetCursorPosition(0, MAP_HEIGHT + 5);
         }
 
@@ -270,14 +303,14 @@ namespace MohawkTerminalGame
         // BOSS ATTACKS / AI METHODS
         // ─────────────────────────────────────────────────────────────────────
 
-        // The Boss uses the spike attack
-        void BossAttackSpike(int x, int y, ColoredText emoji)
+        // The Boss uses an attack
+        void BossAttackEmoji(int x, int y, ColoredText emoji)
         {
             map.Poke(x, y, emoji);
         }
 
         // Set the tiles the boss just attacked back to the normal tileset
-        void ResetBossSpikeAttack(int x, int y)
+        void ResetBossAttackTiles(int x, int y)
         {
             map.Poke(x, y, map.Get(x / 2, y));
         }
