@@ -35,8 +35,8 @@ namespace MohawkTerminalGame
 
         // --- Floor and Wall ---
         // Floor and wall tiles are 2 characters wide because Emojis are 2 characters wide
-        ColoredText floorTile = new(@"· ", ConsoleColor.White, ConsoleColor.Black);
-        ColoredText wallTile = new(@"• ", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText floorTile = new(@"  ", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText wallTile = new(@"██", ConsoleColor.White, ConsoleColor.Black);
 
         // --- Player ---
         ColoredText player = new(@"💀", ConsoleColor.White, ConsoleColor.Black);
@@ -70,9 +70,9 @@ namespace MohawkTerminalGame
         int bossAttackColPos;    // Attack column position (the 'X' value)
         int bossAttackRowPos;    // Attck row position (the 'Y' value)
 
-        bool isBossAttacking;
-        bool isSpikeVertical = true;
-        String currentAttack = "spike";
+        bool isBossAttacking;               // Boss attacking state for lockout
+        bool isSpikeVertical = true;        // Which way the spike attack should go
+        String currentAttack = "spike";     // Which attack the boss is currently using
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -95,11 +95,13 @@ namespace MohawkTerminalGame
             // floorTile = new ColoredText("  ", FLOOR_FG, FLOOR_BG);
             map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
 
-            for (int i = 0; i < MAP_WIDTH; i += 3)
-            {
-                map.SetCol(wallTile, i);
-                map.SetRow(wallTile, i);
-            }
+            //for (int i = 0; i < MAP_WIDTH; i += 3)
+            //{
+                map.SetCol(wallTile, 0);
+                map.SetCol(wallTile, MAP_WIDTH - 1);
+                map.SetRow(wallTile, 0);
+                map.SetRow(wallTile, MAP_HEIGHT - 1);
+            //}
 
             // Rendering
             map.ClearWrite();
@@ -149,12 +151,14 @@ namespace MohawkTerminalGame
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
                 //int attackToUse = Random.Integer(0, 3); 
                 int attackToUse = 0;
-                if (attackToUse == 0) currentAttack = "spike";
+                if (attackToUse == 0)
+                {
+                    currentAttack = "spike";
+                    // Determine which direction to shoot the spikes
+                    isSpikeVertical = Random.CoinFlip();
+                }
                 if (attackToUse == 1) currentAttack = "lightning";
                 if (attackToUse == 2) currentAttack = "wave";
-
-                // Determine which direction to shoot the spikes
-                isSpikeVertical = Random.CoinFlip();
             }
 
             // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
@@ -284,6 +288,7 @@ namespace MohawkTerminalGame
                  * 4. Randomize next attack position
                  * 5. Reset tiles affected by attack
                  */
+
             } // End of Wave attack
 
             // ─────────────────────────────────────────────────────────────────────
@@ -296,6 +301,7 @@ namespace MohawkTerminalGame
             Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
             Terminal.ClearLine();
             Terminal.Write($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
+            Terminal.ForegroundColor = ConsoleColor.Black;
             Terminal.SetCursorPosition(0, MAP_HEIGHT + 5);
         }
 
@@ -332,7 +338,6 @@ namespace MohawkTerminalGame
         void ResetBossAttackingState()
         {
             isBossAttacking = false;
-            // isSpikeVertical = !isSpikeVertical;
             bossAttackCounter = 0;
             bossWarningRow = 0;
             bossAttackRow = 0;
