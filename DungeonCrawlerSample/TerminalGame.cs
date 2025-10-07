@@ -88,13 +88,13 @@ namespace MohawkTerminalGame
             // Boss attack
             if (counter2 % 3 == 0 && counter2 >= 0 && y2 < map.Height)
             {
-                BossAttackSpike(2, y2, boss.attack);
+                BossAttackSpike(2, y2, boss.spike);
                 y2++;
             }
 
             // Reset boss attack tiles
-            if (Input.IsKeyPressed(ConsoleKey.R))
-            {
+            if (counter2 >= 45)
+            {                
                 for (int y = 0; y < map.Height; y++)
                 {
                     ResetBossAttacks(2, y);
@@ -122,9 +122,9 @@ namespace MohawkTerminalGame
             oldPlayerY = playerY;
 
             if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
-            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
-            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
-            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
+            if (Input.IsKeyPressed(ConsoleKey.LeftArrow)  || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
+            if (Input.IsKeyPressed(ConsoleKey.DownArrow)  || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
+            if (Input.IsKeyPressed(ConsoleKey.UpArrow)    || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
             playerX = Math.Clamp(playerX, 0, map.Width - 1);
             playerY = Math.Clamp(playerY, 0, map.Height - 1);
