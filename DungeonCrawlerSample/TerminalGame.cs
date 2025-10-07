@@ -1,4 +1,5 @@
-﻿using System;
+using DungeonCrawlerSample;
+using System;
 
 namespace MohawkTerminalGame
 {
@@ -43,10 +44,18 @@ namespace MohawkTerminalGame
         int playerX = MAP_WIDTH / 2; // Start in center (no real center cause its 15x15)
         int playerY = MAP_HEIGHT / 2;
 
+        int counter;
+        int counter2;
+        int y;
+        int y2;
+
+        BossAI boss = new BossAI();
+
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
         // ─────────────────────────────────────────────────────────────────────
 
+        /// Run once before Execute begins
         public void Setup()
         {
             // Run the game steady by using the timer loop (made by raph)
@@ -74,6 +83,11 @@ namespace MohawkTerminalGame
 
             // Put player on top 
             DrawCharacter(playerX, playerY, player);
+
+            counter = -60;
+            counter2 = -120;
+            y = 0;
+            y2 = 0;
         }
 
         public void Execute()
@@ -93,8 +107,47 @@ namespace MohawkTerminalGame
             // Basic HUD will be changed for sure
             Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
             Terminal.ResetColor();
+            Terminal.ForegroundColor = ConsoleColor.Black;
+            // Terminal.Write(Time.DisplayText);
+
+            // Boss warning
+            if (counter % 3 == 0 && counter > -0 && y < map.Height)
+            {
+                BossAttackSpike(2, y, boss.warning);
+                y++;
+            }
+
+            // Boss attack
+            if (counter2 % 3 == 0 && counter2 >= 0 && y2 < map.Height)
+            {
+                BossAttackSpike(2, y2, boss.spike);
+                y2++;
+            }
+
+            // Reset boss attack tiles
+            if (counter2 >= 45)
+            {
+                for (int y = 0; y < map.Height; y++)
+                {
+                    ResetBossAttacks(2, y);
+                }
+            }
+
+            counter++;
+            counter2++;
+
             Terminal.Write($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
         }
+
+        void BossAttackSpike(int x, int y, ColoredText emoji)
+        {
+            map.Poke(x, y, emoji);
+        }
+
+        void ResetBossAttacks(int x, int y)
+        {
+            map.Poke(x, y, map.Get(x, y));
+        }        
 
         // ─────────────────────────────────────────────────────────────────────
         // BUILDING THE STATIC BACKGROUND
@@ -118,7 +171,7 @@ namespace MohawkTerminalGame
                     bool isOuterLine = (x % INNER_GRID == 0 && x != 0 && x != MAP_WIDTH) || (y % INNER_GRID == 0 && y != 0 && y != MAP_HEIGHT);
 
                     // Inner lines inside the outer lines 3x3
-                    int xInOuter = x % INNER_GRID;   
+                    int xInOuter = x % INNER_GRID;
                     int yInOuter = y % INNER_GRID;
                     bool isInnerLine = (xInOuter != 0) || (yInOuter != 0);
 
@@ -129,7 +182,7 @@ namespace MohawkTerminalGame
                     bool drawDot = isEdgeHighlight || isOuterLine || isInnerLine;
 
                     if (!drawDot)
-                    { 
+                    {
                         continue; // If draw dot not applicable then skip the rest of the code
                     }
 
@@ -144,7 +197,7 @@ namespace MohawkTerminalGame
                     else
                     {
                         map.SetRectangle(new ColoredText("· ", MICRO_DOT_COLOR, under.bgColor), x, y, 1, 1);
-                    }     
+                    }
                 }
             }
         }
@@ -155,44 +208,44 @@ namespace MohawkTerminalGame
 
         // Player movement stuff made by Isaac
         void CheckMovePlayer()
-        {
-            inputChanged = false;
-            oldPlayerX = playerX;
-            oldPlayerY = playerY;
+    {
+        inputChanged = false;
+        oldPlayerX = playerX;
+        oldPlayerY = playerY;
 
-            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
-            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
-            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
-            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
+        if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
+        if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
+        if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
+        if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
-            playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
-            playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
+        playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
+        playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
 
-            if (oldPlayerX != playerX || oldPlayerY != playerY)
-                inputChanged = true;
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // DRAWING HELP
-        // ─────────────────────────────────────────────────────────────────────
-
-        // Raph Code
-        void DrawCharacter(int x, int y, ColoredText character)
-        {
-            if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
-
-            var under = map.Get(x, y);           // Read what’s in the backing array
-            character.bgColor = under.bgColor;   // Then match the background
-            map.Poke(x * CELL_W, y, character);  // Draw at the correct screen column
-        }
-        
-        // Raph Code
-        void ResetCell(int x, int y)
-        {
-            if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
-
-            var tile = map.Get(x, y);
-            map.Poke(x * CELL_W, y, tile);
-        }
+        if (oldPlayerX != playerX || oldPlayerY != playerY)
+            inputChanged = true;
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // DRAWING HELP
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Raph Code
+    void DrawCharacter(int x, int y, ColoredText character)
+    {
+        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+        var under = map.Get(x, y);           // Read what’s in the backing array
+        character.bgColor = under.bgColor;   // Then match the background
+        map.Poke(x * CELL_W, y, character);  // Draw at the correct screen column
+    }
+
+    // Raph Code
+    void ResetCell(int x, int y)
+    {
+        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+        var tile = map.Get(x, y);
+        map.Poke(x * CELL_W, y, tile);
+    }
+}
 }
