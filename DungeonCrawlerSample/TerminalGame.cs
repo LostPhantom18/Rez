@@ -59,14 +59,19 @@ namespace MohawkTerminalGame
         // BOSS AI STORAGE
         // ─────────────────────────────────────────────────────────────────────
 
-        int bossWarningCounter;  // Counter for warning parts of attacks
+        int bossWarningCounter;  // Counter for warning parts of attacks - Unused currently
         int bossAttackCounter;   // Counter for attackinf parts of attacks
 
         int bossWarningRow;      // Warning row (the 'Y' value)
+        int bossWarningCol;      // Warning column (the 'X' value)
         int bossAttackRow;       // Attack row (the 'Y' value)
         int bossAttackCol;       // Attack column (the 'X' value)
+        int bossAttackColPos;    // Attack column position (the 'X' value)
+        int bossAttackRowPos;    // Attck row position (the 'Y' value)
 
         bool isBossAttacking;
+        bool isSpikeVertical = true;
+        String currentAttack = "spike";
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -101,11 +106,9 @@ namespace MohawkTerminalGame
             // Put player on top 
             DrawCharacter(playerX, playerY, player);
 
-            bossWarningCounter = -Program.TargetFPS;
-            bossAttackCounter = -Program.TargetFPS * 2;
-            bossWarningRow = 0;
-            bossAttackRow = 0;
+            // Set up boss attacks
             RandomizeBossColumn();
+            RandomizeBossRow();
         }
 
         public void Execute()
@@ -130,51 +133,126 @@ namespace MohawkTerminalGame
 
             // ─────────────────────────────────────────────────────────────────────
             // BOSS ATTACK CODE LOOPS
+            // ATTACKS HAVE INFO INSIDE
             // ─────────────────────────────────────────────────────────────────────
 
             // Boss choosing what attack to do
             // Check if the boss can attack
-            
+
             // Dev button for boss attack toggles
             if (Input.IsKeyDown(ConsoleKey.H))
             {
                 isBossAttacking = true;
+                // Randomize what attack the boss is going to use
+                // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
+                //int attackToUse = Random.Integer(0, 3); 
+                int attackToUse = 2;
+                if (attackToUse == 0) currentAttack = "spike";
+                if (attackToUse == 1) currentAttack = "lightning";
+                if (attackToUse == 2) currentAttack = "wave";
             }
 
-            // Boss warning
-            // Scuffed hardcoded timer code in the if
-            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (bossWarningCounter % 2 == 0 && bossWarningCounter > 0 && bossWarningRow < map.Height)
+            // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
+            // Start of Spike attack
+            if (currentAttack == "spike")
             {
-                BossAttackSpike(bossAttackCol, bossWarningRow, warning);
-                bossWarningRow++;
-            }
+                /**
+                 * Attack steps:
+                 * 1. Coin flip to choose vertical or horizontal spike line
+                 * 2. Warn where the spikes will show up
+                 * 3. Spikes show up in warning spots
+                 * 4. Randomize where the next attack will happen
+                 * 5. Reset the tiles affected and boss attacking state
+                 */
+                // Determine which direction to shoot the spikes
+                isSpikeVertical = Random.CoinFlip();
 
-            // Boss attack
-            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (bossAttackCounter % 2 == 0 && bossAttackCounter >= 45 && bossAttackRow < map.Height)
-            {
-                BossAttackSpike(bossAttackCol, bossAttackRow, spike);
-                bossAttackRow++;
-            }
-
-            // Reset boss attack tiles
-            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (bossAttackCounter >= 80)
-            {
-                for (int y = 0; y < map.Height; y++)
+                // Boss SPIKE ATTACK - VERTICAL
+                if (isSpikeVertical)
                 {
-                    ResetBossAttacks(bossAttackCol, y);
-                }
-                RandomizeBossColumn();
-            }
+                    // Boss warning
+                    if (bossWarningCounter % 2 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
+                    {
+                        BossAttackSpike(bossAttackColPos, bossWarningRow, warning);
+                        bossWarningRow++;
+                    }
 
-            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            if (isBossAttacking)
+                    // Boss attack
+                    if (bossAttackCounter >= 45 && bossAttackRow < map.Height)
+                    {
+                        BossAttackSpike(bossAttackColPos, bossAttackRow, spike);
+                        bossAttackRow++;
+                    }
+
+                    // Reset boss attack tiles
+                    if (bossAttackCounter >= 80)
+                    {
+                        for (int y = 0; y < map.Height; y++)
+                        {
+                            ResetBossSpikeAttack(bossAttackColPos, y);
+                        }
+                        RandomizeBossColumn();
+                        ResetBossAttackingState();
+                    }
+
+                    // Increase counters while the boss is using an attack
+                    if (isBossAttacking)
+                    {
+                        bossAttackCounter++;
+                    }
+                }
+                // Boss SPIKE ATTACK - HORIZONTAL
+                else
+                {
+                    // Boss warning
+                    if (bossWarningCounter % 2 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
+                    {
+                        BossAttackSpike(bossWarningCol * 2, bossAttackRowPos, warning);
+                        bossWarningCol++;
+                    }
+
+                    // Boss attack
+                    if (bossAttackCounter >= 45 && bossAttackCol < map.Width)
+                    {
+                        BossAttackSpike(bossAttackCol * 2, bossAttackRowPos, spike);
+                        bossAttackCol++;
+                    }
+
+                    // Reset boss attack tiles
+                    if (bossAttackCounter >= 80)
+                    {
+                        for (int x = 0; x < map.Width; x++)
+                        {
+                            ResetBossSpikeAttack(x * 2, bossAttackRowPos);
+                        }
+                        RandomizeBossRow();
+                        ResetBossAttackingState();
+                    }
+
+                    // Increase counters while the boss is using an attack
+                    if (isBossAttacking)
+                    {
+                        bossAttackCounter++;
+                    }
+                }
+            } // End of Spike attack
+            
+            // Start of Lightning attack
+            if (currentAttack == "lightning")
             {
-                bossWarningCounter++;
-                bossAttackCounter++;
-            }
+
+            } // End of Lightning attack
+
+            // Start of Wave attack
+            if (currentAttack == "wave")
+            {
+                /**
+                 * Attack Steps:
+                 * 1. Choose vertical or horizontal (?)
+                 * 2. Warning on the rows or columns that will be affected
+                 * 3. Waves on the warnings
+                 */
+            } // End of Wave attack
 
             // ─────────────────────────────────────────────────────────────────────
             // DISPLAY
@@ -182,8 +260,10 @@ namespace MohawkTerminalGame
 
             Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
             Terminal.ResetColor();
-            Terminal.ForegroundColor = ConsoleColor.Black;
-            Terminal.Write($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
+            Terminal.ForegroundColor = ConsoleColor.White;
+            Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
+            Terminal.WriteLine($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
+            Terminal.SetCursorPosition(0, MAP_HEIGHT + 5);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -197,22 +277,34 @@ namespace MohawkTerminalGame
         }
 
         // Set the tiles the boss just attacked back to the normal tileset
-        void ResetBossAttacks(int x, int y)
+        void ResetBossSpikeAttack(int x, int y)
         {
             map.Poke(x, y, map.Get(x / 2, y));
-            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
-            bossWarningCounter = 0;
-            bossAttackCounter = 0;
-            bossWarningRow = 0;
-            bossAttackRow = 0;
-            isBossAttacking = false;
         }
 
-        // Randomize boss attack position
+        // Randomize boss attack column (X value)
         void RandomizeBossColumn()
         {
             // Multiply by 2 because emojis are 2-wide characters
-            bossAttackCol = Random.Integer(0, MAP_WIDTH) * 2;
+            bossAttackColPos = Random.Integer(0, MAP_WIDTH) * 2;
+        }
+
+        // Randomize boss attack row (Y value)
+        void RandomizeBossRow()
+        {
+            bossAttackRowPos = Random.Integer(0, 15);
+        }
+
+        // Resets the boss attacking state so it can attack again
+        void ResetBossAttackingState()
+        {
+            isBossAttacking = false;
+            // isSpikeVertical = !isSpikeVertical;
+            bossAttackCounter = 0;
+            bossWarningRow = 0;
+            bossAttackRow = 0;
+            bossWarningCol = 0;
+            bossAttackCol = 0;
         }
 
         // ─────────────────────────────────────────────────────────────────────
