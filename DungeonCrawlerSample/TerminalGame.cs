@@ -16,6 +16,11 @@ namespace MohawkTerminalGame
         int playerX = 5;
         int playerY = 0;
 
+        int counter;
+        int counter2;
+        int y;
+        int y2;
+
         BossAI boss = new BossAI();
 
         /// Run once before Execute begins
@@ -31,13 +36,18 @@ namespace MohawkTerminalGame
 
             // Set map to some values
             map = new(10, 10, tree);
-            map.SetCol(riverNS, 3);
-            map.SetRow(riverEW, 8);
+            // map.SetCol(riverNS, 3);
+            // map.SetRow(riverEW, 8);
 
             // Clear window and draw map
             map.ClearWrite();
             // Draw player. x2 because my tileset is 2 columns wide.
             DrawCharacter(playerX, playerY, player);
+
+            counter = -60;
+            counter2 = -120;
+            y = 0;
+            y2 = 0;
         }
 
         // Execute() runs based on Program.TerminalExecuteMode (assign to it in Setup).
@@ -68,29 +78,42 @@ namespace MohawkTerminalGame
             Terminal.ForegroundColor = ConsoleColor.Black;
             // Terminal.Write(Time.DisplayText);
 
-            if (Input.IsKeyPressed(ConsoleKey.H))
+            // Boss warning
+            if (counter % 3 == 0 && counter >- 0 && y < map.Height)
             {
-                //boss.TestAttack(map, riverEW);
-                map.Poke(2, 5, boss.warning);
-                map.Poke(2, 6, boss.warning);
-                map.Poke(2, 7, boss.warning);
+                BossAttackSpike(2, y, boss.warning);
+                y++;
             }
 
-            if (Input.IsKeyPressed(ConsoleKey.G))
+            // Boss attack
+            if (counter2 % 3 == 0 && counter2 >= 0 && y2 < map.Height)
             {
-                map.Poke(2, 5, boss.attack);
-                map.Poke(2, 6, boss.attack);
-                map.Poke(2, 7, boss.attack);
+                BossAttackSpike(2, y2, boss.attack);
+                y2++;
             }
 
+            // Reset boss attack tiles
             if (Input.IsKeyPressed(ConsoleKey.R))
             {
-                map.Poke(2, 5, map.Get(2, 5));
-                map.Poke(2, 6, map.Get(2, 5));
-                map.Poke(2, 7, map.Get(2, 5));
+                for (int y = 0; y < map.Height; y++)
+                {
+                    ResetBossAttacks(2, y);
+                }
             }
+
+            counter++;
+            counter2++;
         }
 
+        void BossAttackSpike(int x, int y, ColoredText emoji)
+        {
+            map.Poke(x, y, emoji);
+        }
+
+        void ResetBossAttacks(int x, int y)
+        {
+            map.Poke(x, y, map.Get(x, y));
+        }
         void CheckMovePlayer()
         {
             //
@@ -98,14 +121,10 @@ namespace MohawkTerminalGame
             oldPlayerX = playerX;
             oldPlayerY = playerY;
 
-            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D))
-                playerX++;
-            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A))
-                playerX--;
-            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S))
-                playerY++;
-            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W))
-                playerY--;
+            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
+            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
+            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
+            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
             playerX = Math.Clamp(playerX, 0, map.Width - 1);
             playerY = Math.Clamp(playerY, 0, map.Height - 1);
