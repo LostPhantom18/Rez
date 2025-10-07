@@ -10,10 +10,10 @@ namespace DungeonCrawlerSample
     public class BossAI
     {
         // Emojis for boss attacks
-        public ColoredText warning = new(@"⚠️", ConsoleColor.Yellow, ConsoleColor.DarkGreen);
-        public ColoredText spike = new(@"💥", ConsoleColor.Red, ConsoleColor.DarkGreen);
-        public ColoredText lightning = new(@"⚡", ConsoleColor.Yellow, ConsoleColor.DarkGreen);
-        public ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.DarkGreen);
+        public ColoredText warning = new(@"⚠️", ConsoleColor.Yellow, ConsoleColor.Black);
+        public ColoredText spike = new(@"💥", ConsoleColor.Red, ConsoleColor.Black);
+        public ColoredText lightning = new(@"⚡", ConsoleColor.Yellow, ConsoleColor.Black);
+        public ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.Black);
 
         public BossAI()
         {

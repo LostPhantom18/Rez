@@ -21,10 +21,6 @@ namespace MohawkTerminalGame
         const int MAP_HEIGHT = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
 
         // Dot colors (console only supports 16 colors theres no way for hexidecimals; grayscale is fastest and looks the best imo)
-        readonly ConsoleColor MACRO_DOT_COLOR = ConsoleColor.Gray; // Big tile lines
-        readonly ConsoleColor MICRO_DOT_COLOR = ConsoleColor.DarkGray; // Inner 3×3 lines
-        readonly ConsoleColor FLOOR_FG = ConsoleColor.Black;
-        readonly ConsoleColor FLOOR_BG = ConsoleColor.Black; // Dark background
 
         // ─────────────────────────────────────────────────────────────────────
         // GAME RUNTIME STATE
@@ -32,11 +28,26 @@ namespace MohawkTerminalGame
 
         TerminalGridWithColor map = null!; // The 2D array we are drawing into, then rendering
 
-        // Floor tile which is two columns wide to make the board look nice and even
-        ColoredText floorTile = null!;
+        // ─────────────────────────────────────────────────────────────────────
+        // EMOJI STORAGE
+        // ─────────────────────────────────────────────────────────────────────
 
-        // Player
-        ColoredText player = new("💀", ConsoleColor.White, ConsoleColor.Black);
+        // --- Floor and Wall ---
+        // Floor and wall tiles are 2 characters wide because Emojis are 2 characters wide
+        ColoredText floorTile = new(@"· ", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText wallTile = new(@"• ", ConsoleColor.White, ConsoleColor.Black);
+
+        // --- Player ---
+        ColoredText player = new(@"💀", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText gem = new(@"💎", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText shield = new(@"🛡️", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText sword = new(@"⚔️", ConsoleColor.White, ConsoleColor.Black);
+
+        // --- Boss ---
+        public ColoredText warning = new(@"⚠️", ConsoleColor.Yellow, ConsoleColor.Black);
+        public ColoredText spike = new(@"💥", ConsoleColor.Red, ConsoleColor.Black);
+        public ColoredText lightning = new(@"⚡", ConsoleColor.Yellow, ConsoleColor.Black);
+        public ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.Black);
 
         // Input recording so we only need to redraw when neccessary
         bool inputChanged;
@@ -44,12 +55,12 @@ namespace MohawkTerminalGame
         int playerX = MAP_WIDTH / 2; // Start in center (no real center cause its 15x15)
         int playerY = MAP_HEIGHT / 2;
 
+        // Temp boss code
         int counter;
         int counter2;
-        int y;
-        int y2;
-
-        BossAI boss = new BossAI();
+        int bossAttackY;
+        int bossAttackY2;
+        int bossAttackX;
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -66,17 +77,17 @@ namespace MohawkTerminalGame
             // Making the console perty
             Terminal.SetTitle("Wizard Tower");
             Terminal.CursorVisible = false;
-            Terminal.BackgroundColor = FLOOR_BG;
+            Terminal.BackgroundColor = ConsoleColor.Black;
 
             // Build a new 15×15 grid (each cell makes two columns)
-            floorTile = new ColoredText("  ", FLOOR_FG, FLOOR_BG);
+            // floorTile = new ColoredText("  ", FLOOR_FG, FLOOR_BG);
             map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
 
-            // Make floor
-            BuildFloor();
-
-            // Drawing the grid lines onto screen
-            DrawGridLines();
+            for (int i = 0; i < MAP_WIDTH; i += 3)
+            {
+                map.SetCol(wallTile, i);
+                map.SetRow(wallTile, i);
+            }
 
             // Rendering
             map.ClearWrite();
@@ -84,10 +95,11 @@ namespace MohawkTerminalGame
             // Put player on top 
             DrawCharacter(playerX, playerY, player);
 
-            counter = -60;
-            counter2 = -120;
-            y = 0;
-            y2 = 0;
+            counter = -Program.TargetFPS;
+            counter2 = -Program.TargetFPS * 2;
+            bossAttackY = 0;
+            bossAttackY2 = 0;
+            RandomizeBossX();
         }
 
         public void Execute()
@@ -105,147 +117,131 @@ namespace MohawkTerminalGame
             }
 
             // Basic HUD will be changed for sure
-            Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
-            Terminal.ResetColor();
-            Terminal.ForegroundColor = ConsoleColor.Black;
+            // Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
+            // Terminal.ResetColor();
+            // Terminal.ForegroundColor = ConsoleColor.Black;
             // Terminal.Write(Time.DisplayText);
 
+            // ─────────────────────────────────────────────────────────────────────
+            // BOSS ATTACK CODE LOOPS
+            // ─────────────────────────────────────────────────────────────────────
+
             // Boss warning
-            if (counter % 3 == 0 && counter > -0 && y < map.Height)
+            // Scuffed hardcoded timer code in the if
+            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
+            if (counter % 3 == 0 && counter > -0 && bossAttackY < map.Height)
             {
-                BossAttackSpike(2, y, boss.warning);
-                y++;
+                BossAttackSpike(bossAttackX, bossAttackY, warning);
+                bossAttackY++;
             }
 
             // Boss attack
-            if (counter2 % 3 == 0 && counter2 >= 0 && y2 < map.Height)
+            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
+            if (counter2 % 3 == 0 && counter2 >= 0 && bossAttackY2 < map.Height)
             {
-                BossAttackSpike(2, y2, boss.spike);
-                y2++;
+                BossAttackSpike(bossAttackX, bossAttackY2, spike);
+                bossAttackY2++;
             }
 
             // Reset boss attack tiles
-            if (counter2 >= 45)
+            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
+            if (counter2 >= Program.TargetFPS)
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    ResetBossAttacks(2, y);
+                    ResetBossAttacks(bossAttackX, y);
                 }
+                RandomizeBossX();
             }
 
+            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
             counter++;
             counter2++;
 
+            // ─────────────────────────────────────────────────────────────────────
+            // DISPLAY
+            // ─────────────────────────────────────────────────────────────────────
+
+            Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
+            Terminal.ResetColor();
+            Terminal.ForegroundColor = ConsoleColor.Black;
             Terminal.Write($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // BOSS ATTACKS / AI METHODS
+        // ─────────────────────────────────────────────────────────────────────
+
+        // The Boss uses the spike attack
         void BossAttackSpike(int x, int y, ColoredText emoji)
         {
             map.Poke(x, y, emoji);
         }
 
+        // Set the tiles the boss just attacked back to the normal tileset
         void ResetBossAttacks(int x, int y)
         {
-            map.Poke(x, y, map.Get(x, y));
-        }        
-
-        // ─────────────────────────────────────────────────────────────────────
-        // BUILDING THE STATIC BACKGROUND
-        // ─────────────────────────────────────────────────────────────────────
-
-        // Just makes the floor
-        void BuildFloor()
-        {
-            for (int y = 0; y < MAP_HEIGHT; y++)
-                for (int x = 0; x < MAP_WIDTH; x++)
-                    map.SetRectangle(floorTile, x, y, 1, 1);
+            map.Poke(x, y, map.Get(x / 2, y));
+            // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
+            counter = -60;
+            counter2 = -120;
+            bossAttackY = 0;
+            bossAttackY2 = 0;
         }
 
-        void DrawGridLines()
+        // Randomize boss attack position
+        // Still kinda scuffed, should be fixed when attacks are modular
+        // ISAAC - FIX THE COUNTER CODE TO MAKE IT MODULAR
+        void RandomizeBossX()
         {
-            for (int y = 0; y < MAP_HEIGHT; y++)
-            {
-                for (int x = 0; x < MAP_WIDTH; x++)
-                {
-                    // Outer lines between small tiles
-                    bool isOuterLine = (x % INNER_GRID == 0 && x != 0 && x != MAP_WIDTH) || (y % INNER_GRID == 0 && y != 0 && y != MAP_HEIGHT);
-
-                    // Inner lines inside the outer lines 3x3
-                    int xInOuter = x % INNER_GRID;
-                    int yInOuter = y % INNER_GRID;
-                    bool isInnerLine = (xInOuter != 0) || (yInOuter != 0);
-
-                    // Edge highlight (what you asked for): brighten TOP and LEFT edges
-                    bool isEdgeHighlight = (x == 0) || (y == 0);
-
-                    // Decide if we draw here
-                    bool drawDot = isEdgeHighlight || isOuterLine || isInnerLine;
-
-                    if (!drawDot)
-                    {
-                        continue; // If draw dot not applicable then skip the rest of the code
-                    }
-
-                    var under = map.Get(x, y);
-
-                    // If its highlighted or is the outerline 
-                    if (isEdgeHighlight || isOuterLine)
-                    {
-                        map.SetRectangle(new ColoredText("• ", MACRO_DOT_COLOR, under.bgColor), x, y, 1, 1);
-                    }
-                    // Must be inner line then
-                    else
-                    {
-                        map.SetRectangle(new ColoredText("· ", MICRO_DOT_COLOR, under.bgColor), x, y, 1, 1);
-                    }
-                }
-            }
+            // MAP_WIDTH * 2 because emojis are 2-wide characters
+            bossAttackX = Random.Integer(0, MAP_WIDTH) * 2;
         }
 
         // ─────────────────────────────────────────────────────────────────────
         // INPUT / MOVEMENT
         // ─────────────────────────────────────────────────────────────────────
 
-        // Player movement stuff made by Isaac
+        // Player movement stuff made by Raph; Modified by Isaac
         void CheckMovePlayer()
-    {
-        inputChanged = false;
-        oldPlayerX = playerX;
-        oldPlayerY = playerY;
+        {
+            inputChanged = false;
+            oldPlayerX = playerX;
+            oldPlayerY = playerY;
 
-        if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
-        if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
-        if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
-        if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
+            if (Input.IsKeyPressed(ConsoleKey.RightArrow) || Input.IsKeyPressed(ConsoleKey.D)) playerX++;
+            if (Input.IsKeyPressed(ConsoleKey.LeftArrow) || Input.IsKeyPressed(ConsoleKey.A)) playerX--;
+            if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
+            if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
-        playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
-        playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
+            playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
+            playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
 
-        if (oldPlayerX != playerX || oldPlayerY != playerY)
-            inputChanged = true;
+            if (oldPlayerX != playerX || oldPlayerY != playerY)
+                inputChanged = true;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DRAWING HELP
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Raph Code
+        void DrawCharacter(int x, int y, ColoredText character)
+        {
+            if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+            var under = map.Get(x, y);           // Read what’s in the backing array
+            character.bgColor = under.bgColor;   // Then match the background
+            map.Poke(x * CELL_W, y, character);  // Draw at the correct screen column
+        }
+
+        // Raph Code
+        void ResetCell(int x, int y)
+        {
+            if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+
+            var tile = map.Get(x, y);
+            map.Poke(x * CELL_W, y, tile);
+        }
     }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // DRAWING HELP
-    // ─────────────────────────────────────────────────────────────────────
-
-    // Raph Code
-    void DrawCharacter(int x, int y, ColoredText character)
-    {
-        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
-
-        var under = map.Get(x, y);           // Read what’s in the backing array
-        character.bgColor = under.bgColor;   // Then match the background
-        map.Poke(x * CELL_W, y, character);  // Draw at the correct screen column
-    }
-
-    // Raph Code
-    void ResetCell(int x, int y)
-    {
-        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
-
-        var tile = map.Get(x, y);
-        map.Poke(x * CELL_W, y, tile);
-    }
-}
 }
