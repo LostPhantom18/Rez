@@ -102,10 +102,12 @@ namespace MohawkTerminalGame
         // BOSS AI STORAGE
         // ─────────────────────────────────────────────────────────────────────
 
-        int bossSpikeTimer;      // Timer for spike attack
-        int bossLightningTimer;  // Timer for lightning attack
-        int bossWaveTimer;       // Timer for wave attack
-        int bossAttackCounter;   // Counter for attackinf parts of attacks
+        int bossSpikeTimer;             // Timer for spike attack
+        int bossLightningTimer;         // Timer for lightning attack
+        int bossWaveTimer;              // Timer for wave attack
+        int bossAttackCounter;          // Counter for attackinf parts of attacks
+        int bossAttackInterval;         // How often the boss attacks (frames, not seconds)
+        int bossAttackIntervalCounter;  // Counts towards the next boss attack (frames, not seconds)
 
         int bossWarningRow;      // Warning row (the 'Y' value)
         int bossWarningCol;      // Warning column (the 'X' value)
@@ -121,6 +123,10 @@ namespace MohawkTerminalGame
         int waveRow;                        // The current (haha) row the wave is at
         bool isWaveAttackOver;              // The wave attack progress status
         String currentAttack = "";          // Which attack the boss is currently using
+
+        bool[,] attackArray;                // Memory for where the boss is currently attacking
+        int bossPhase;                      // Weighting for the boss attacks based on the phase
+        bool playerHasSword;                // If the player has the sword
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -143,8 +149,6 @@ namespace MohawkTerminalGame
 
             if (gameOver == false)
             {
-
-
                 // Build a new 15×15 grid (each cell makes two columns)
                 map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
 
@@ -156,6 +160,16 @@ namespace MohawkTerminalGame
                 map.SetRow(wallTile, MAP_HEIGHT - 1);
                 //}
 
+                // Initialize the attack array to false
+                attackArray = new bool[map.Width * 2, map.Height];
+                for (int x = 0; x < map.Width * 2; x++)
+                {
+                    for (int y = 0; y < map.Height; y++)
+                    {
+                        attackArray[x, y] = false;
+                    }
+                }
+
                 // Rendering
                 map.ClearWrite();
 
@@ -166,6 +180,10 @@ namespace MohawkTerminalGame
                 RandomizeBossColumn();
                 RandomizeBossRow();
                 isSpikeVertical = true;
+                bossPhase = 9;
+                playerHasSword = false;
+                bossAttackInterval = 160;
+                bossAttackIntervalCounter = 0;
 
                 // Set up sword items
                 swordParts[0] = gem;
@@ -209,8 +227,6 @@ namespace MohawkTerminalGame
             CheckIfDead();
             if (gameOver == false)
             {
-
-
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -219,7 +235,6 @@ namespace MohawkTerminalGame
                     // Make sure to replace what was under the old player like the floor and dots and stuff
                     ResetCell(oldPlayerX, oldPlayerY);
                     // Then put player in new spot
-                    DrawCharacter(playerX, playerY, player);
                     inputChanged = false;
                 }
 
@@ -240,277 +255,316 @@ namespace MohawkTerminalGame
                 // Check if the boss can attack
 
                 // Dev button for boss attack toggles
-                if (Input.IsKeyDown(ConsoleKey.H))
+                //if (Input.IsKeyDown(ConsoleKey.H))
+                if (bossAttackIntervalCounter >= bossAttackInterval)
                 {
-                    ResetBossAttackingState();
-
-                    // Randomize what attack the boss is going to use
-                    // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
-                    int attackToUse = Random.Integer(0, 3);
-                    //int attackToUse = 0;
-
-                    // Spike attack settings
-                    if (attackToUse == 0)
+                    // Only choose a new attack if the boss is not attacking
+                    if (!isBossAttacking)
                     {
-                        currentAttack = "spike";
-                        // Randomize where the boss will attack
-                        RandomizeBossColumn();
-                        RandomizeBossRow();
-                        spikePositionCounter = 0;
-                        // Determine which direction to shoot the spikes
-                        isSpikeVertical = Random.CoinFlip();
-                    }
+                        ResetBossAttackingState();
+                        // Randomize what attack the boss is going to use
+                        int attackToUse = Random.Integer(0, bossPhase);
 
-                    // Lightning attack settings
-                    if (attackToUse == 1)
-                    {
-                        currentAttack = "lightning";
-                        // Randomize where the boss will attack
-                        RandomizeBossColumn();
-                        // Determine how far down to shoot the lightning
-                        lightningSize = Random.Integer(7, 13);
+                        // Spike attack settings
+                        if (attackToUse < 10)
+                        {
+                            currentAttack = "spike";
+                            // Randomize where the boss will attack
+                            RandomizeBossColumn();
+                            RandomizeBossRow();
+                            spikePositionCounter = 0;
+                            // Determine which direction to shoot the spikes
+                            isSpikeVertical = Random.CoinFlip();
+                        }
+                        // Lightning attack settings
+                        else if (attackToUse < 17)
+                        {
+                            currentAttack = "lightning";
+                            // Randomize where the boss will attack
+                            RandomizeBossColumn();
+                            // Determine how far down to shoot the lightning
+                            lightningSize = Random.Integer(7, 13);
+                        }
+                        // Wave attack settings
+                        else if (attackToUse < 20)
+                        {
+                            currentAttack = "wave";
+                            // Randomize where the boss will attack
+                            RandomizeBossColumn();
+                            // Reset the wave row
+                            waveRow = MAP_HEIGHT - 1;
+                        }
+                        isBossAttacking = true;
                     }
-
-                    // Wave attack settings
-                    if (attackToUse == 2)
-                    {
-                        currentAttack = "wave";
-                        // Randomize where the boss will attack
-                        RandomizeBossColumn();
-                        // Reset the wave row
-                        waveRow = MAP_HEIGHT - 1;
-                    }
-
-                    isBossAttacking = true;
+                }
+                // Increase timer to next attack when not in an attack
+                else
+                {
+                    bossAttackIntervalCounter++;
                 }
 
                 // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
-                // Start of Spike attack
-                if (currentAttack == "spike")
+                // Only use attacks if the boss is attacking
+                if (isBossAttacking)
                 {
-                    /**
-                     * Attack Steps:
-                     * 1. Coin flip to choose vertical or horizontal spike line
-                     *    Spike line is 3 columns wide
-                     * 2. Warn where the spikes will show up
-                     * 3. Spikes show up in warning spots
-                     * 4. Reset the tiles affected and boss attacking state
-                     */
-
-                    // Boss SPIKE ATTACK - VERTICAL
-                    if (isSpikeVertical)
+                    // Start of Spike attack
+                    if (currentAttack == "spike")
                     {
-                        // Boss warning
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
+                        /**
+                         * Attack Steps:
+                         * 1. Coin flip to choose vertical or horizontal spike line
+                         *    Spike line is 3 columns wide
+                         * 2. Warn where the spikes will show up
+                         * 3. Spikes show up in warning spots
+                         * 4. Reset the tiles affected and boss attacking state
+                         */
+
+                        // Boss SPIKE ATTACK - VERTICAL
+                        if (isSpikeVertical)
                         {
-                            // Warn the left row, selected row, and right row
-                            BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
-                            BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                            BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
+                            // Boss warning
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
+                            {
+                                // Warn the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning, false);
+                                BossAttackEmoji(bossAttackColPos, bossWarningRow, warning, false);
+                                BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning, false);
+                                bossWarningRow++;
+                            }
+
+                            // Boss attack
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackRow < map.Height)
+                            {
+                                // Attack the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike, true);
+                                BossAttackEmoji(bossAttackColPos, bossAttackRow, spike, true);
+                                BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike, true);
+                                bossAttackRow++;
+                            }
+
+                            // Reset boss attack tiles
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Height)
+                            {
+                                // Reset the left row, selected row, and right row
+                                ResetBossAttackTiles(bossAttackColPos - 2, spikePositionCounter);
+                                ResetBossAttackTiles(bossAttackColPos, spikePositionCounter);
+                                ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
+                                spikePositionCounter++;
+
+                                if (spikePositionCounter >= map.Height)
+                                {
+                                    bossAttackIntervalCounter = 0;
+                                    isBossAttacking = false;
+                                }
+                            }
+
+                            // Increase time counter while the boss is using an attack
+                            bossSpikeTimer++;
+                            bossAttackCounter++;
+                        }
+                        // Boss SPIKE ATTACK - HORIZONTAL
+                        else
+                        {
+                            // Boss warning
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
+                            {
+                                // Warn the left column, selected column, and right column
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning, false);
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning, false);
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning, false);
+                                bossWarningCol++;
+                            }
+
+                            // Boss attack
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackCol < map.Width)
+                            {
+                                // Attack the left column, selected column, and right column
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike, true);
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike, true);
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike, true);
+                                bossAttackCol++;
+                            }
+
+                            // Reset boss attack tiles
+                            if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Width * 2)
+                            {
+                                // Reset the left column, selected column, and right columny
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 1);
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos);
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
+                                spikePositionCounter++;
+
+                                if (spikePositionCounter >= map.Width * 2)
+                                {
+                                    bossAttackIntervalCounter = 0;
+                                    isBossAttacking = false;
+                                }
+                            }
+
+                            // Increase time counter while the boss is using an attack
+                            bossSpikeTimer++;
+                            bossAttackCounter++;
+                        }
+                    } // End of Spike attack
+
+                    // Start of Lightning attack
+                    if (currentAttack == "lightning")
+                    {
+                        /**
+                         * Attack Steps:
+                         * 1. Choose which columns to affect (choose 1, then every other for x amount of columns)
+                         *    Lightning is 1 tile wide, but affects 9 rows at every other row
+                         * 2. Warn where the lightning will strike
+                         * 3. Shoot lightning on the warning tiles
+                         * 4. Reset tiles affected by attack
+                         */
+
+                        // Boss warning
+                        if (bossLightningTimer % 2 == 0 && bossAttackCounter > 0 && bossWarningRow < lightningSize)
+                        {
+                            // Warn the far left column, left column, selected column, right column, and far right column
+                            BossAttackEmoji(bossAttackColPos - 8, bossWarningRow, warning, false);
+                            BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning, false);
+                            BossAttackEmoji(bossAttackColPos, bossWarningRow, warning, false);
+                            BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning, false);
+                            BossAttackEmoji(bossAttackColPos + 8, bossWarningRow, warning, false);
                             bossWarningRow++;
                         }
 
                         // Boss attack
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackRow < map.Height)
+                        if (bossLightningTimer % 2 == 0 && bossAttackCounter >= 45 && bossAttackRow < lightningSize)
                         {
-                            // Attack the left row, selected row, and right row
-                            BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike);
-                            BossAttackEmoji(bossAttackColPos, bossAttackRow, spike);
-                            BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike);
+                            // Attack the far left column, left column, selected column, right column, and far right column
+                            BossAttackEmoji(bossAttackColPos - 8, bossAttackRow, lightning, true);
+                            BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, lightning, true);
+                            BossAttackEmoji(bossAttackColPos, bossAttackRow, lightning, true);
+                            BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, lightning, true);
+                            BossAttackEmoji(bossAttackColPos + 8, bossAttackRow, lightning, true);
                             bossAttackRow++;
                         }
 
                         // Reset boss attack tiles
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Height)
+                        if (bossAttackCounter >= 70)
                         {
-                            //for (int y = 0; y < map.Height; y++)
-                            //{
-                            // Reset the left row, selected row, and right row
-                            ResetBossAttackTiles(bossAttackColPos - 2, spikePositionCounter);
-                            ResetBossAttackTiles(bossAttackColPos, spikePositionCounter);
-                            ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
-                            //}
-                            spikePositionCounter++;
+                            for (int y = 0; y < lightningSize; y++)
+                            {
+                                // Reset the far left column, left column, selected column, right column, and far right column
+                                ResetBossAttackTiles(bossAttackColPos - 8, y);
+                                ResetBossAttackTiles(bossAttackColPos - 4, y);
+                                ResetBossAttackTiles(bossAttackColPos, y);
+                                ResetBossAttackTiles(bossAttackColPos + 4, y);
+                                ResetBossAttackTiles(bossAttackColPos + 8, y);
+                            }
+                            bossAttackIntervalCounter = 0;
+                            isBossAttacking = false;
                         }
 
                         // Increase time counter while the boss is using an attack
-                        bossSpikeTimer++;
+                        bossLightningTimer++;
                         bossAttackCounter++;
-                    }
-                    // Boss SPIKE ATTACK - HORIZONTAL
-                    else
+
+                    } // End of Lightning attack
+
+                    // Start of Wave attack
+                    if (currentAttack == "wave")
                     {
+                        /**
+                         * Attack Steps:
+                         * 1. Choose vertical area to be safe
+                         * 2. Warning on all other rows or columns that will be affected
+                         * 3. Waves on the warnings
+                         * 4. Recede the waves
+                         * 5. Finish attack
+                         */
                         // Boss warning
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
+                        if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                         {
-                            // Warn the left column, selected column, and right column
-                            BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning);
-                            BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning);
-                            BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning);
-                            bossWarningCol++;
+                            // Warn all columns except the 2 to the left and right where the attack was chosen
+                            for (int i = 0; i < map.Width * 2; i += 2)
+                            {
+                                // Skip the safe area
+                                if (i == bossAttackColPos - 4 ||
+                                    i == bossAttackColPos - 2 ||
+                                    i == bossAttackColPos ||
+                                    i == bossAttackColPos + 2 ||
+                                    i == bossAttackColPos + 4)
+                                    continue;
+                                BossAttackEmoji(i, bossWarningRow, warning, false);
+                            }
+                            bossWarningRow++;
                         }
 
                         // Boss attack
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackCol < map.Width)
+                        if (bossWaveTimer % 6 == 0 && bossAttackCounter >= 80 && bossAttackRow < map.Height)
                         {
-                            // Attack the left column, selected column, and right column
-                            BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike);
-                            BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike);
-                            BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike);
-                            bossAttackCol++;
+                            // Attack the warned rows from above
+                            for (int i = 0; i < map.Width * 2; i += 2)
+                            {
+                                // Skip the safe area
+                                if (i == bossAttackColPos - 4 ||
+                                    i == bossAttackColPos - 2 ||
+                                    i == bossAttackColPos ||
+                                    i == bossAttackColPos + 2 ||
+                                    i == bossAttackColPos + 4)
+                                    continue;
+                                BossAttackEmoji(i, bossAttackRow, wave, true);
+                            }
+                            bossAttackRow++;
                         }
 
-                        // Reset boss attack tiles
-                        if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Width * 2)
+                        // Reset boss attack tiles by reversing the attack
+                        if (bossWaveTimer % 4 == 0 && bossAttackCounter >= 200 && waveRow >= 0)
                         {
-                            //for (int x = 0; x < map.Width; x++)
-                            //{
-                            // Reset the left column, selected column, and right columny
-                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 1);
-                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos);
-                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
-                            //}
-                            spikePositionCounter++;
+                            for (int i = 0; i < map.Width * 2; i += 2)
+                            {
+                                // Skip the safe area
+                                if (i == bossAttackColPos - 4 ||
+                                    i == bossAttackColPos - 2 ||
+                                    i == bossAttackColPos ||
+                                    i == bossAttackColPos + 2 ||
+                                    i == bossAttackColPos + 4)
+                                    continue;
+
+                                ResetBossAttackTiles(i, waveRow);
+                            }
+                            waveRow--;
+
+                            // When the wave has fully retracted
+                            if (waveRow < 0)
+                            {
+                                bossAttackIntervalCounter = 0;
+                                isBossAttacking = false;
+                            }
                         }
 
                         // Increase time counter while the boss is using an attack
-                        bossSpikeTimer++;
+                        bossWaveTimer++;
                         bossAttackCounter++;
-                    }
-                } // End of Spike attack
 
-                // Start of Lightning attack
-                if (currentAttack == "lightning")
-                {
-                    /**
-                     * Attack Steps:
-                     * 1. Choose which columns to affect (choose 1, then every other for x amount of columns)
-                     *    Lightning is 1 tile wide, but affects 9 rows at every other row
-                     * 2. Warn where the lightning will strike
-                     * 3. Shoot lightning on the warning tiles
-                     * 4. Reset tiles affected by attack
-                     */
+                    } // End of Wave attack
 
-                    // Boss warning
-                    if (bossLightningTimer % 2 == 0 && bossAttackCounter > 0 && bossWarningRow < lightningSize)
-                    {
-                        // Warn the far left column, left column, selected column, right column, and far right column
-                        BossAttackEmoji(bossAttackColPos - 8, bossWarningRow, warning);
-                        BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning);
-                        BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                        BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning);
-                        BossAttackEmoji(bossAttackColPos + 8, bossWarningRow, warning);
-                        bossWarningRow++;
-                    }
-
-                    // Boss attack
-                    if (bossLightningTimer % 2 == 0 && bossAttackCounter >= 45 && bossAttackRow < lightningSize)
-                    {
-                        // Attack the far left column, left column, selected column, right column, and far right column
-                        BossAttackEmoji(bossAttackColPos - 8, bossAttackRow, lightning);
-                        BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, lightning);
-                        BossAttackEmoji(bossAttackColPos, bossAttackRow, lightning);
-                        BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, lightning);
-                        BossAttackEmoji(bossAttackColPos + 8, bossAttackRow, lightning);
-                        bossAttackRow++;
-                    }
-
-                    // Reset boss attack tiles
-                    if (bossAttackCounter >= 70)
-                    {
-                        for (int y = 0; y < lightningSize; y++)
-                        {
-                            // Reset the far left column, left column, selected column, right column, and far right column
-                            ResetBossAttackTiles(bossAttackColPos - 8, y);
-                            ResetBossAttackTiles(bossAttackColPos - 4, y);
-                            ResetBossAttackTiles(bossAttackColPos, y);
-                            ResetBossAttackTiles(bossAttackColPos + 4, y);
-                            ResetBossAttackTiles(bossAttackColPos + 8, y);
-                        }
-                    }
-
-                    // Increase time counter while the boss is using an attack
-                    bossLightningTimer++;
-                    bossAttackCounter++;
-
-                } // End of Lightning attack
-
-                // Start of Wave attack
-                if (currentAttack == "wave")
-                {
-                    /**
-                     * Attack Steps:
-                     * 1. Choose vertical area to be safe
-                     * 2. Warning on all other rows or columns that will be affected
-                     * 3. Waves on the warnings
-                     * 4. Recede the waves
-                     * 5. Finish attack
-                     */
-                    // Boss warning
-                    if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
-                    {
-                        // Warn all columns except the 2 to the left and right where the attack was chosen
-                        for (int i = 0; i < map.Width * 2; i += 2)
-                        {
-                            // Skip the safe area
-                            if (i == bossAttackColPos - 4 ||
-                                i == bossAttackColPos - 2 ||
-                                i == bossAttackColPos ||
-                                i == bossAttackColPos + 2 ||
-                                i == bossAttackColPos + 4)
-                                continue;
-                            BossAttackEmoji(i, bossWarningRow, warning);
-                        }
-                        bossWarningRow++;
-                    }
-
-                    // Boss attack
-                    if (bossWaveTimer % 6 == 0 && bossAttackCounter >= 80 && bossAttackRow < map.Height)
-                    {
-                        // Attack the warned rows from above
-                        for (int i = 0; i < map.Width * 2; i += 2)
-                        {
-                            // Skip the safe area
-                            if (i == bossAttackColPos - 4 ||
-                                i == bossAttackColPos - 2 ||
-                                i == bossAttackColPos ||
-                                i == bossAttackColPos + 2 ||
-                                i == bossAttackColPos + 4)
-                                continue;
-                            BossAttackEmoji(i, bossAttackRow, wave);
-                        }
-                        bossAttackRow++;
-                    }
-
-                    // Reset boss attack tiles by reversing the attack
-                    if (bossWaveTimer % 4 == 0 && bossAttackCounter >= 200 && waveRow >= 0)
-                    {
-                        for (int i = 0; i < map.Width * 2; i += 2)
-                        {
-                            // Skip the safe area
-                            if (i == bossAttackColPos - 4 ||
-                                i == bossAttackColPos - 2 ||
-                                i == bossAttackColPos ||
-                                i == bossAttackColPos + 2 ||
-                                i == bossAttackColPos + 4)
-                                continue;
-
-                            ResetBossAttackTiles(i, waveRow);
-                        }
-                        waveRow--;
-
-                        if (waveRow < 0) isWaveAttackOver = true; // When the wave has fully retracted
-                    }
-
-                    // Increase time counter while the boss is using an attack
-                    bossWaveTimer++;
-                    bossAttackCounter++;
-
-                } // End of Wave attack
-
+                }
                 // ─────────────────────────────────────────────────────────────────────
                 // DISPLAY
                 // ─────────────────────────────────────────────────────────────────────
+
+                // Draw the player so they are always on top of the action
+                DrawCharacter(playerX, playerY, player);
+
+                // Player takes damage if they are in a cell with an attack (buffer needed?)
+                if (PlayerInDanger() && !playerHasSword)
+                {
+                    ChangeHealth(-1);
+                    ResetBossAttackTiles(playerX * 2, playerY);
+                }
+                // Player delfects an attack when they have the sword
+                else if (PlayerInDanger() && playerHasSword)
+                {
+                    ResetBossAttackTiles(playerX * 2, playerY);
+                    playerHasSword = false;
+                    bossPhase += 5;
+                    bossAttackInterval -= 60;
+                }
 
                 /*
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
@@ -622,6 +676,7 @@ namespace MohawkTerminalGame
 
             // Re-setup player, sword, etc.
             DrawCharacter(playerX, playerY, player);
+            Setup();
         }
         private void ClearMap()
         {
@@ -629,7 +684,7 @@ namespace MohawkTerminalGame
             {
                 for (int x = 0; x < MAP_WIDTH; x++)
                 {
-                    map.Poke(x * CELL_W, y, floorTile);
+                    map.Poke(x * CELL_W, y, map.Get(x, y));
                 }
             }
         }
@@ -656,43 +711,44 @@ namespace MohawkTerminalGame
             string posText = $"Pos({playerX + 1},{playerY + 1})";
             string timePosFull = $"Time: {timeText}   {posText}";
 
-            string colRowText = $"Column:{bossAttackColPos} Row:{bossAttackRowPos}";
+            //string colRowText = $"Is player hit:";
 
             // Only update if changed (or forced)
-            if (force || timePosFull != lastTimePosText)
-            {
-                lastTimePosText = timePosFull;
-                // write padded text so leftover chars are cleared
-                string padded = timePosFull.PadRight(60, ' ');
+            //if (force || timePosFull != lastTimePosText)
+            //{
+            //    lastTimePosText = timePosFull;
+            //    // write padded text so leftover chars are cleared
+            //    string padded = timePosFull.PadRight(60, ' ');
 
-                Terminal.SetCursorPosition(0, hudRowTimePos);
-                Terminal.ResetColor();
-                Terminal.ForegroundColor = ConsoleColor.White;
-                Terminal.Write(padded);
-            }
+            //    Terminal.SetCursorPosition(0, hudRowTimePos);
+            //    Terminal.ResetColor();
+            //    Terminal.ForegroundColor = ConsoleColor.White;
+            //    Terminal.Write(padded);
+            //}
 
-            if (force || colRowText != lastColRowText)
-            {
-                lastColRowText = colRowText;
-                string padded2 = colRowText.PadRight(60, ' ');
+            //if (force || colRowText != lastColRowText)
+            //{
+            //    lastColRowText = colRowText;
+            //    string padded2 = colRowText.PadRight(60, ' ');
 
-                Terminal.SetCursorPosition(0, hudRowColumnRow);
-                Terminal.ResetColor();
-                Terminal.ForegroundColor = ConsoleColor.White;
-                Terminal.Write(padded2);
-            }
+            //    Terminal.SetCursorPosition(0, hudRowColumnRow);
+            //    Terminal.ResetColor();
+            //    Terminal.ForegroundColor = ConsoleColor.White;
+            //    Terminal.Write(padded2);
+            //}
         }
         // ─────────────────────────────────────────────────────────────────────
         // BOSS ATTACKS / AI METHODS
         // ─────────────────────────────────────────────────────────────────────
 
         // The Boss uses an attack
-        void BossAttackEmoji(int x, int y, ColoredText emoji)
+        void BossAttackEmoji(int x, int y, ColoredText emoji, bool isAttack)
         {
             // Check if the position is in bounds, quit if not
             if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
 
             map.Poke(x, y, emoji);
+            if (isAttack) attackArray[x, y] = true;
         }
 
         // Set the tiles the boss just attacked back to the normal tileset
@@ -701,6 +757,7 @@ namespace MohawkTerminalGame
             // Check if the position is in bounds, quit if not
             if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
             map.Poke(x, y, map.Get(x / 2, y));
+            attackArray[x, y] = false;
         }
 
         // Randomize boss attack column (X value)
@@ -732,6 +789,13 @@ namespace MohawkTerminalGame
             bossSpikeTimer = 0;
             bossLightningTimer = 0;
             bossWaveTimer = 0;
+        }
+
+        // Checks if the player is in the same square as an attack
+        public bool PlayerInDanger()
+        {
+            if (attackArray[playerX * 2, playerY]) return true;
+            return false;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -798,7 +862,6 @@ namespace MohawkTerminalGame
             // If a part is on the map then make it and allow it to be picked up
             if (swordX != -1)
             {
-
                 // Each cell is two columns wide
                 map.Poke(swordX * CELL_W, swordY, currentSword);
 
@@ -813,6 +876,7 @@ namespace MohawkTerminalGame
 
                     if (swordIndex >= swordParts.Length)
                     {
+                        playerHasSword = true;
                         swordIndex = 0;
                     }
                 }
@@ -873,8 +937,5 @@ namespace MohawkTerminalGame
                 lastDrawnHealth = -1; // force update
             }
         }
-
-
-
     }
 }
