@@ -164,8 +164,8 @@ namespace MohawkTerminalGame
 
                 // Randomize what attack the boss is going to use
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
-                //int attackToUse = Random.Integer(0, 3);
-                int attackToUse = 2;
+                int attackToUse = Random.Integer(0, 3);
+                //int attackToUse = 2;
 
                 // Spike attack settings
                 if (attackToUse == 0)
@@ -365,9 +365,17 @@ namespace MohawkTerminalGame
                 if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                 {
                     // Warn all columns except the 2 to the left and right where the attack was chosen
-                    //BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
-                    //BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                    //BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
+                    for (int i = 0; i < map.Width * 2; i += 2)
+                    {
+                        // Skip the safe area
+                        if (i == bossAttackColPos - 4 ||
+                            i == bossAttackColPos - 2 ||
+                            i == bossAttackColPos     ||
+                            i == bossAttackColPos + 2 ||
+                            i == bossAttackColPos + 4)
+                            continue;
+                        BossAttackEmoji(i, bossWarningRow, warning);
+                    }
                     bossWarningRow++;
                 }
 
@@ -375,18 +383,35 @@ namespace MohawkTerminalGame
                 if (bossWaveTimer % 6 == 0 && bossAttackCounter >= 80 && bossAttackRow < map.Height)
                 {
                     // Attack the warned rows from above
-                    BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, wave);
-                    BossAttackEmoji(bossAttackColPos, bossAttackRow, wave);
-                    BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, wave);
+                    for (int i = 0; i < map.Width * 2; i += 2)
+                    {
+                        // Skip the safe area
+                        if (i == bossAttackColPos - 4 ||
+                            i == bossAttackColPos - 2 ||
+                            i == bossAttackColPos     ||
+                            i == bossAttackColPos + 2 ||
+                            i == bossAttackColPos + 4)
+                            continue;
+                        BossAttackEmoji(i, bossAttackRow, wave);
+                    }
                     bossAttackRow++;
                 }
 
                 // Reset boss attack tiles by reversing the attack
                 if (bossWaveTimer % 4 == 0 && bossAttackCounter >= 200 && waveRow >= 0)
                 {
-                    ResetBossAttackTiles(bossAttackColPos - 2, waveRow);
-                    ResetBossAttackTiles(bossAttackColPos, waveRow);
-                    ResetBossAttackTiles(bossAttackColPos + 2, waveRow);
+                    for (int i = 0; i < map.Width * 2; i += 2)
+                    {
+                        // Skip the safe area
+                        if (i == bossAttackColPos - 4 ||
+                            i == bossAttackColPos - 2 ||
+                            i == bossAttackColPos     ||
+                            i == bossAttackColPos + 2 ||
+                            i == bossAttackColPos + 4) 
+                            continue;
+
+                        ResetBossAttackTiles(i, waveRow);
+                    }
                     waveRow--;
 
                     if (waveRow < 0) isWaveAttackOver = true; // When the wave has fully retracted
