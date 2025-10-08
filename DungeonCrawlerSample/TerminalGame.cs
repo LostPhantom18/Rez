@@ -102,10 +102,12 @@ namespace MohawkTerminalGame
         // BOSS AI STORAGE
         // ─────────────────────────────────────────────────────────────────────
 
-        int bossSpikeTimer;      // Timer for spike attack
-        int bossLightningTimer;  // Timer for lightning attack
-        int bossWaveTimer;       // Timer for wave attack
-        int bossAttackCounter;   // Counter for attackinf parts of attacks
+        int bossSpikeTimer;             // Timer for spike attack
+        int bossLightningTimer;         // Timer for lightning attack
+        int bossWaveTimer;              // Timer for wave attack
+        int bossAttackCounter;          // Counter for attackinf parts of attacks
+        int bossAttackInterval;         // How often the boss attacks (frames, not seconds)
+        int bossAttackIntervalCounter;  // Counts towards the next boss attack (frames, not seconds)
 
         int bossWarningRow;      // Warning row (the 'Y' value)
         int bossWarningCol;      // Warning column (the 'X' value)
@@ -122,8 +124,9 @@ namespace MohawkTerminalGame
         bool isWaveAttackOver;              // The wave attack progress status
         String currentAttack = "";          // Which attack the boss is currently using
 
-        bool[,] attackArray;                 // Memory for where the boss is currently attacking
-        int bossPhase;
+        bool[,] attackArray;                // Memory for where the boss is currently attacking
+        int bossPhase;                      // Weighting for the boss attacks based on the phase
+        bool playerHasSword;                // If the player has the sword
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -146,8 +149,6 @@ namespace MohawkTerminalGame
 
             if (gameOver == false)
             {
-
-
                 // Build a new 15×15 grid (each cell makes two columns)
                 map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
 
@@ -179,7 +180,10 @@ namespace MohawkTerminalGame
                 RandomizeBossColumn();
                 RandomizeBossRow();
                 isSpikeVertical = true;
-                bossPhase = 0;
+                bossPhase = 9;
+                playerHasSword = false;
+                bossAttackInterval = 160;
+                bossAttackIntervalCounter = 0;
 
                 // Set up sword items
                 swordParts[0] = gem;
@@ -223,8 +227,6 @@ namespace MohawkTerminalGame
             CheckIfDead();
             if (gameOver == false)
             {
-
-
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -253,7 +255,8 @@ namespace MohawkTerminalGame
                 // Check if the boss can attack
 
                 // Dev button for boss attack toggles
-                if (Input.IsKeyDown(ConsoleKey.H))
+                //if (Input.IsKeyDown(ConsoleKey.H))
+                if (bossAttackIntervalCounter >= bossAttackInterval)
                 {
                     // Only choose a new attack if the boss is not attacking
                     if (!isBossAttacking)
@@ -274,7 +277,7 @@ namespace MohawkTerminalGame
                             isSpikeVertical = Random.CoinFlip();
                         }
                         // Lightning attack settings
-                        else if (attackToUse < 15)
+                        else if (attackToUse < 17)
                         {
                             currentAttack = "lightning";
                             // Randomize where the boss will attack
@@ -283,7 +286,7 @@ namespace MohawkTerminalGame
                             lightningSize = Random.Integer(7, 13);
                         }
                         // Wave attack settings
-                        else if (attackToUse < 18)
+                        else if (attackToUse < 20)
                         {
                             currentAttack = "wave";
                             // Randomize where the boss will attack
@@ -291,9 +294,13 @@ namespace MohawkTerminalGame
                             // Reset the wave row
                             waveRow = MAP_HEIGHT - 1;
                         }
-
                         isBossAttacking = true;
                     }
+                }
+                // Increase timer to next attack when not in an attack
+                else
+                {
+                    bossAttackIntervalCounter++;
                 }
 
                 // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
@@ -344,7 +351,11 @@ namespace MohawkTerminalGame
                                 ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
                                 spikePositionCounter++;
 
-                                if (spikePositionCounter >= map.Height) isBossAttacking = false;
+                                if (spikePositionCounter >= map.Height)
+                                {
+                                    bossAttackIntervalCounter = 0;
+                                    isBossAttacking = false;
+                                }
                             }
 
                             // Increase time counter while the boss is using an attack
@@ -383,7 +394,11 @@ namespace MohawkTerminalGame
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
                                 spikePositionCounter++;
 
-                                if (spikePositionCounter >= map.Width * 2) isBossAttacking = false;
+                                if (spikePositionCounter >= map.Width * 2)
+                                {
+                                    bossAttackIntervalCounter = 0;
+                                    isBossAttacking = false;
+                                }
                             }
 
                             // Increase time counter while the boss is using an attack
@@ -440,6 +455,7 @@ namespace MohawkTerminalGame
                                 ResetBossAttackTiles(bossAttackColPos + 4, y);
                                 ResetBossAttackTiles(bossAttackColPos + 8, y);
                             }
+                            bossAttackIntervalCounter = 0;
                             isBossAttacking = false;
                         }
 
@@ -513,7 +529,12 @@ namespace MohawkTerminalGame
                             }
                             waveRow--;
 
-                            if (waveRow < 0) isBossAttacking = false; // When the wave has fully retracted
+                            // When the wave has fully retracted
+                            if (waveRow < 0)
+                            {
+                                bossAttackIntervalCounter = 0;
+                                isBossAttacking = false;
+                            }
                         }
 
                         // Increase time counter while the boss is using an attack
@@ -531,10 +552,18 @@ namespace MohawkTerminalGame
                 DrawCharacter(playerX, playerY, player);
 
                 // Player takes damage if they are in a cell with an attack (buffer needed?)
-                if (PlayerInDanger())
+                if (PlayerInDanger() && !playerHasSword)
                 {
                     ChangeHealth(-1);
                     ResetBossAttackTiles(playerX * 2, playerY);
+                }
+                // Player delfects an attack when they have the sword
+                else if (PlayerInDanger() && playerHasSword)
+                {
+                    ResetBossAttackTiles(playerX * 2, playerY);
+                    playerHasSword = false;
+                    bossPhase += 5;
+                    bossAttackInterval -= 60;
                 }
 
                 /*
@@ -682,31 +711,31 @@ namespace MohawkTerminalGame
             string posText = $"Pos({playerX + 1},{playerY + 1})";
             string timePosFull = $"Time: {timeText}   {posText}";
 
-            string colRowText = $"Is player hit:";
+            //string colRowText = $"Is player hit:";
 
             // Only update if changed (or forced)
-            if (force || timePosFull != lastTimePosText)
-            {
-                lastTimePosText = timePosFull;
-                // write padded text so leftover chars are cleared
-                string padded = timePosFull.PadRight(60, ' ');
+            //if (force || timePosFull != lastTimePosText)
+            //{
+            //    lastTimePosText = timePosFull;
+            //    // write padded text so leftover chars are cleared
+            //    string padded = timePosFull.PadRight(60, ' ');
 
-                Terminal.SetCursorPosition(0, hudRowTimePos);
-                Terminal.ResetColor();
-                Terminal.ForegroundColor = ConsoleColor.White;
-                Terminal.Write(padded);
-            }
+            //    Terminal.SetCursorPosition(0, hudRowTimePos);
+            //    Terminal.ResetColor();
+            //    Terminal.ForegroundColor = ConsoleColor.White;
+            //    Terminal.Write(padded);
+            //}
 
-            if (force || colRowText != lastColRowText)
-            {
-                lastColRowText = colRowText;
-                string padded2 = colRowText.PadRight(60, ' ');
+            //if (force || colRowText != lastColRowText)
+            //{
+            //    lastColRowText = colRowText;
+            //    string padded2 = colRowText.PadRight(60, ' ');
 
-                Terminal.SetCursorPosition(0, hudRowColumnRow);
-                Terminal.ResetColor();
-                Terminal.ForegroundColor = ConsoleColor.White;
-                Terminal.Write(padded2);
-            }
+            //    Terminal.SetCursorPosition(0, hudRowColumnRow);
+            //    Terminal.ResetColor();
+            //    Terminal.ForegroundColor = ConsoleColor.White;
+            //    Terminal.Write(padded2);
+            //}
         }
         // ─────────────────────────────────────────────────────────────────────
         // BOSS ATTACKS / AI METHODS
@@ -765,8 +794,7 @@ namespace MohawkTerminalGame
         // Checks if the player is in the same square as an attack
         public bool PlayerInDanger()
         {
-            // 
-            if (attackArray[playerX * 2, playerY]) return true; 
+            if (attackArray[playerX * 2, playerY]) return true;
             return false;
         }
 
@@ -834,7 +862,6 @@ namespace MohawkTerminalGame
             // If a part is on the map then make it and allow it to be picked up
             if (swordX != -1)
             {
-
                 // Each cell is two columns wide
                 map.Poke(swordX * CELL_W, swordY, currentSword);
 
@@ -849,6 +876,7 @@ namespace MohawkTerminalGame
 
                     if (swordIndex >= swordParts.Length)
                     {
+                        playerHasSword = true;
                         swordIndex = 0;
                     }
                 }
@@ -909,8 +937,5 @@ namespace MohawkTerminalGame
                 lastDrawnHealth = -1; // force update
             }
         }
-
-
-
     }
 }
