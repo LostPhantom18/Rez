@@ -118,6 +118,7 @@ namespace MohawkTerminalGame
         String currentAttack = "";          // Which attack the boss is currently using
 
         bool[,] attackArray;                 // Memory for where the boss is currently attacking
+        int bossPhase;
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -172,6 +173,7 @@ namespace MohawkTerminalGame
                 RandomizeBossColumn();
                 RandomizeBossRow();
                 isSpikeVertical = true;
+                bossPhase = 0;
 
                 // Set up sword items
                 swordParts[0] = gem;
@@ -244,16 +246,15 @@ namespace MohawkTerminalGame
                 // Dev button for boss attack toggles
                 if (Input.IsKeyDown(ConsoleKey.H))
                 {
-                    // Randomize what attack the boss is going to use
-                    // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
-                    int attackToUse = Random.Integer(0, 3);
-                    //int attackToUse = 0;
-
+                    // Only choose a new attack if the boss is not attacking
                     if (!isBossAttacking)
                     {
                         ResetBossAttackingState();
+                        // Randomize what attack the boss is going to use
+                        int attackToUse = Random.Integer(0, bossPhase);
+
                         // Spike attack settings
-                        if (attackToUse == 0)
+                        if (attackToUse < 10)
                         {
                             currentAttack = "spike";
                             // Randomize where the boss will attack
@@ -263,9 +264,8 @@ namespace MohawkTerminalGame
                             // Determine which direction to shoot the spikes
                             isSpikeVertical = Random.CoinFlip();
                         }
-
                         // Lightning attack settings
-                        if (attackToUse == 1)
+                        else if (attackToUse < 15)
                         {
                             currentAttack = "lightning";
                             // Randomize where the boss will attack
@@ -273,9 +273,8 @@ namespace MohawkTerminalGame
                             // Determine how far down to shoot the lightning
                             lightningSize = Random.Integer(7, 13);
                         }
-
                         // Wave attack settings
-                        if (attackToUse == 2)
+                        else if (attackToUse < 18)
                         {
                             currentAttack = "wave";
                             // Randomize where the boss will attack
