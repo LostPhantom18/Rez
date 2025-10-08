@@ -76,6 +76,8 @@ namespace MohawkTerminalGame
         bool isBossAttacking;               // Boss attacking state for lockout
         bool isSpikeVertical;               // Which way the spike attack should go
         int lightningSize;                  // How many rows should the lightning affect
+        int waveRow;                        // The current (haha) row the wave is at
+        bool isWaveAttackOver;              // The wave attack progress status
         String currentAttack = "";          // Which attack the boss is currently using
 
         // ─────────────────────────────────────────────────────────────────────
@@ -158,15 +160,19 @@ namespace MohawkTerminalGame
             // Dev button for boss attack toggles
             if (Input.IsKeyDown(ConsoleKey.H))
             {
-                isBossAttacking = true;
+                ResetBossAttackingState();
+
                 // Randomize what attack the boss is going to use
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
-                //int attackToUse = Random.Integer(0, 3); 
-                int attackToUse = 1;
+                int attackToUse = Random.Integer(0, 3);
+                //int attackToUse = 2;
 
                 if (attackToUse == 0)
                 {
                     currentAttack = "spike";
+                    // Randomize where the boss will attack
+                    RandomizeBossColumn();
+                    RandomizeBossRow();
                     // Determine which direction to shoot the spikes
                     isSpikeVertical = Random.CoinFlip();
                 }
@@ -174,11 +180,22 @@ namespace MohawkTerminalGame
                 if (attackToUse == 1)
                 {
                     currentAttack = "lightning";
+                    // Randomize where the boss will attack
+                    RandomizeBossColumn();
                     // Determine how far down to shoot the lightning
                     lightningSize = Random.Integer(5, 10);
                 }
 
-                if (attackToUse == 2) currentAttack = "wave";
+                if (attackToUse == 2)
+                {
+                    currentAttack = "wave";
+                    // Randomize where the boss will attack
+                    RandomizeBossColumn();
+                    // Reset the wave row
+                    waveRow = MAP_HEIGHT - 1;
+                }
+
+                isBossAttacking = true;
             }
 
             // Many nested ifs for attacks because I don't want to work with classes or state machine for this - Isaac
@@ -202,9 +219,9 @@ namespace MohawkTerminalGame
                     if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                     {
                         // Warn the left row, selected row, and right row
-                        if (bossAttackColPos >= 2) BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
+                        BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
                         BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                        if (bossAttackColPos <= (map.Width - 2) * 2 - 2) BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
+                        BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
                         bossWarningRow++;
                     }
 
@@ -212,9 +229,9 @@ namespace MohawkTerminalGame
                     if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackRow < map.Height)
                     {
                         // Attack the left row, selected row, and right row
-                        if (bossAttackColPos >= 2) BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike);
+                        BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike);
                         BossAttackEmoji(bossAttackColPos, bossAttackRow, spike);
-                        if (bossAttackColPos <= (map.Width - 2) * 2 - 2) BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike);
+                        BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike);
                         bossAttackRow++;
                     }
 
@@ -224,20 +241,18 @@ namespace MohawkTerminalGame
                         for (int y = 0; y < map.Height; y++)
                         {
                             // Reset the left row, selected row, and right row
-                            if (bossAttackColPos >= 2) ResetBossAttackTiles(bossAttackColPos - 2, y);
+                            ResetBossAttackTiles(bossAttackColPos - 2, y);
                             ResetBossAttackTiles(bossAttackColPos, y);
-                            if (bossAttackColPos <= (map.Width - 2) * 2 - 2) ResetBossAttackTiles(bossAttackColPos + 2, y);
+                            ResetBossAttackTiles(bossAttackColPos + 2, y);
                         }
-                        RandomizeBossColumn();
-                        ResetBossAttackingState();
                     }
 
                     // Increase time counter while the boss is using an attack
-                    if (isBossAttacking)
-                    {
-                        bossSpikeTimer++;
-                        bossAttackCounter++;
-                    }
+                    //if (isBossAttacking)
+                    //{
+                    bossSpikeTimer++;
+                    bossAttackCounter++;
+                    //}
                 }
                 // Boss SPIKE ATTACK - HORIZONTAL
                 else
@@ -246,9 +261,9 @@ namespace MohawkTerminalGame
                     if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
                     {
                         // Warn the left column, selected column, and right column
-                        if (bossAttackRowPos >= 1) BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning);
+                        BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning);
                         BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning);
-                        if (bossAttackRowPos <= map.Height - 1) BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning);
+                        BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning);
                         bossWarningCol++;
                     }
 
@@ -256,9 +271,9 @@ namespace MohawkTerminalGame
                     if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackCol < map.Width)
                     {
                         // Attack the left column, selected column, and right column
-                        if (bossAttackRowPos >= 1) BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike);
+                        BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike);
                         BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike);
-                        if (bossAttackRowPos <= map.Height - 1) BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike);
+                        BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike);
                         bossAttackCol++;
                     }
 
@@ -268,20 +283,18 @@ namespace MohawkTerminalGame
                         for (int x = 0; x < map.Width; x++)
                         {
                             // Reset the left column, selected column, and right columny
-                            if (bossAttackRowPos >= 1) ResetBossAttackTiles(x * 2, bossAttackRowPos - 1);
+                            ResetBossAttackTiles(x * 2, bossAttackRowPos - 1);
                             ResetBossAttackTiles(x * 2, bossAttackRowPos);
-                            if (bossAttackRowPos <= map.Height - 1) ResetBossAttackTiles(x * 2, bossAttackRowPos + 1);
+                            ResetBossAttackTiles(x * 2, bossAttackRowPos + 1);
                         }
-                        RandomizeBossRow();
-                        ResetBossAttackingState();
                     }
 
                     // Increase time counter while the boss is using an attack
-                    if (isBossAttacking)
-                    {
-                        bossSpikeTimer++;
-                        bossAttackCounter++;
-                    }
+                    //if (isBossAttacking)
+                    //{
+                    bossSpikeTimer++;
+                    bossAttackCounter++;
+                    //}
                 }
             } // End of Spike attack
 
@@ -302,11 +315,11 @@ namespace MohawkTerminalGame
                 if (bossLightningTimer % 2 == 0 && bossAttackCounter > 0 && bossWarningRow < lightningSize)
                 {
                     // Warn the far left column, left column, selected column, right column, and far right column
-                    if (bossAttackColPos >= 8) BossAttackEmoji(bossAttackColPos - 8, bossWarningRow, warning);
-                    if (bossAttackColPos >= 4) BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos - 8, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning);
                     BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                    if (bossAttackColPos <= (map.Width - 4) * 2 - 2) BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning);
-                    if (bossAttackColPos <= (map.Width - 8) * 2 - 2) BossAttackEmoji(bossAttackColPos + 8, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos + 8, bossWarningRow, warning);
                     bossWarningRow++;
                 }
 
@@ -314,11 +327,11 @@ namespace MohawkTerminalGame
                 if (bossLightningTimer % 2 == 0 && bossAttackCounter >= 45 && bossAttackRow < lightningSize)
                 {
                     // Attack the far left column, left column, selected column, right column, and far right column
-                    if (bossAttackColPos >= 8) BossAttackEmoji(bossAttackColPos - 8, bossAttackRow, lightning);
-                    if (bossAttackColPos >= 4) BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, lightning);
+                    BossAttackEmoji(bossAttackColPos - 8, bossAttackRow, lightning);
+                    BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, lightning);
                     BossAttackEmoji(bossAttackColPos, bossAttackRow, lightning);
-                    if (bossAttackColPos <= (map.Width - 4) * 2 - 2) BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, lightning);
-                    if (bossAttackColPos <= (map.Width - 8) * 2 - 2) BossAttackEmoji(bossAttackColPos + 8, bossAttackRow, lightning);
+                    BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, lightning);
+                    BossAttackEmoji(bossAttackColPos + 8, bossAttackRow, lightning);
                     bossAttackRow++;
                 }
 
@@ -328,14 +341,12 @@ namespace MohawkTerminalGame
                     for (int y = 0; y < lightningSize; y++)
                     {
                         // Reset the far left column, left column, selected column, right column, and far right column
-                        if (bossAttackColPos >= 8) ResetBossAttackTiles(bossAttackColPos - 8, y);
-                        if (bossAttackColPos >= 4) ResetBossAttackTiles(bossAttackColPos - 4, y);
+                        ResetBossAttackTiles(bossAttackColPos - 8, y);
+                        ResetBossAttackTiles(bossAttackColPos - 4, y);
                         ResetBossAttackTiles(bossAttackColPos, y);
-                        if (bossAttackColPos <= (map.Width - 4) * 2 - 2) ResetBossAttackTiles(bossAttackColPos + 4, y);
-                        if (bossAttackColPos <= (map.Width - 8) * 2 - 2) ResetBossAttackTiles(bossAttackColPos + 8, y);
+                        ResetBossAttackTiles(bossAttackColPos + 4, y);
+                        ResetBossAttackTiles(bossAttackColPos + 8, y);
                     }
-                    RandomizeBossColumn();
-                    ResetBossAttackingState();
                 }
 
                 // Increase time counter while the boss is using an attack
@@ -358,7 +369,47 @@ namespace MohawkTerminalGame
                  * 4. Randomize next attack position
                  * 5. Reset tiles affected by attack
                  */
+                // Boss warning
+                if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
+                {
+                    // Warn the left row, selected row, and right row
+                    BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
+                    BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
+                    bossWarningRow++;
+                }
 
+                // Boss attack
+                if (bossWaveTimer % 6 == 0 && bossAttackCounter >= 80 && bossAttackRow < map.Height)
+                {
+                    // Attack the left row, selected row, and right row
+                    BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, wave);
+                    BossAttackEmoji(bossAttackColPos, bossAttackRow, wave);
+                    BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, wave);
+                    bossAttackRow++;
+                }
+
+                // Reset boss attack tiles
+                if (bossWaveTimer % 4 == 0 && bossAttackCounter >= 200 && waveRow >= 0)
+                {
+                    // Reset the left row, selected row, and right row
+                    ResetBossAttackTiles(bossAttackColPos - 2, waveRow);
+                    ResetBossAttackTiles(bossAttackColPos, waveRow);
+                    ResetBossAttackTiles(bossAttackColPos + 2, waveRow);
+                    waveRow--;
+
+                    if (waveRow < 0) isWaveAttackOver = true; // When the wave has fully retracted
+                }
+
+                // Reset the attack state if the wave attack has finished
+                if (isWaveAttackOver) isWaveAttackOver = false;
+
+                // Increase time counter while the boss is using an attack
+                //if (isBossAttacking)
+                //{
+                bossWaveTimer++;
+                bossAttackCounter++;
+                //}
             } // End of Wave attack
 
             // ─────────────────────────────────────────────────────────────────────
@@ -382,12 +433,17 @@ namespace MohawkTerminalGame
         // The Boss uses an attack
         void BossAttackEmoji(int x, int y, ColoredText emoji)
         {
+            // Check if the position is in bounds, quit if not
+            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
+
             map.Poke(x, y, emoji);
         }
 
         // Set the tiles the boss just attacked back to the normal tileset
         void ResetBossAttackTiles(int x, int y)
         {
+            // Check if the position is in bounds, quit if not
+            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
             map.Poke(x, y, map.Get(x / 2, y));
         }
 
@@ -408,6 +464,7 @@ namespace MohawkTerminalGame
         void ResetBossAttackingState()
         {
             isBossAttacking = false;
+            currentAttack = "";
             bossAttackCounter = 0;
 
             bossWarningRow = 0;
