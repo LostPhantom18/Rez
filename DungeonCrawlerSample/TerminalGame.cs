@@ -25,6 +25,8 @@ namespace MohawkTerminalGame
         const int MAP_HEIGHT = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
 
         // Jonahs Stuff
+        bool hasShownBanterOne = false;
+        bool hasShownBanterTwo = false;
         bool testDying = false; // Turn to true if you want to take damage over time
         private bool gameOverScreenDrawn = false;
         int startTimeToDie = 0;
@@ -48,9 +50,12 @@ namespace MohawkTerminalGame
 
         string[] rightCharacterArt = new string[]
 {
-    "   ^  ",
-    "_/  \\_ ",
-    "(0 = 0)"
+    "     \\ v//",
+    "   Á  \\V/",
+    " _/-\\_ V",
+    " {òʘó} ¡",
+    "<[ : ]\\| ",
+    "  v v  |  "
 };
 
         // Joanhs Stuff
@@ -124,6 +129,7 @@ namespace MohawkTerminalGame
         /// Run once before Execute begins
         public void Setup()
         {
+            BanterDialogueOne();
             damageTimerStart = DateTime.Now;
             // Run the game steady by using the timer loop (made by raph)
             Program.TerminalExecuteMode = TerminalExecuteMode.ExecuteTime;
@@ -170,7 +176,7 @@ namespace MohawkTerminalGame
 
                 // Draw static right-side ASCII character (only once)
                 int mapWidth = MAP_WIDTH * CELL_W;
-                int margin = 5;
+                int margin = 15;
                 int characterX = mapWidth + margin;
                 int characterY = 5;
                 DrawAsciiCharacter(characterX, characterY, rightCharacterArt, ConsoleColor.Red);
@@ -180,6 +186,9 @@ namespace MohawkTerminalGame
 
         public void Execute()
         {
+
+            BanterDialogueOne();
+            BanterDialogueTwo();
 
             if (testDying)
             {
@@ -191,7 +200,7 @@ namespace MohawkTerminalGame
                     damageElapsed = 0f;
                 }
             }
-            
+
             if (gameOver)
             {
                 DrawGameOverScreen();
@@ -520,12 +529,14 @@ namespace MohawkTerminalGame
                     UpdateHearts();
                     lastDrawnHealth = health;
                 }
-
-                // Clear stray input characters
                 Terminal.ForegroundColor = ConsoleColor.Black;
+                // Clear stray input characters
+                /*
+                
                 Console.SetCursorPosition(0, MAP_HEIGHT + 6);
                 Console.Write(new string(' ', 800));
                 Console.SetCursorPosition(0, MAP_HEIGHT + 6);
+                */
             }
             else
             {
@@ -534,7 +545,24 @@ namespace MohawkTerminalGame
             }
 
         }
-
+        private void BanterDialogueOne()
+        {
+            //Terminal.ForegroundColor = ConsoleColor.Black;
+            Terminal.SetCursorPosition(48, 20);
+            //Terminal.ResetColor();
+            Terminal.ForegroundColor = ConsoleColor.White;
+            Terminal.WriteLine($"You are going to die muahaha!");
+            //Terminal.ClearLine();
+        }
+        private void BanterDialogueTwo()
+        {
+            //Terminal.ForegroundColor = ConsoleColor.Black;
+            Terminal.SetCursorPosition(48, 16);
+            //Terminal.ResetColor();
+            Terminal.ForegroundColor = ConsoleColor.White;
+            Terminal.WriteLine($"You are going to die muahaha akldhfbJSHDBFKHJASDFKHASKFH!");
+            //Terminal.ClearLine();
+        }
         private void DrawGameOverScreen()
         {
             if (!gameOverScreenDrawn)
