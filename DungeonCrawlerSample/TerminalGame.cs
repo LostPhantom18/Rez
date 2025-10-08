@@ -75,6 +75,7 @@ namespace MohawkTerminalGame
 
         bool isBossAttacking;               // Boss attacking state for lockout
         bool isSpikeVertical;               // Which way the spike attack should go
+        int spikePositionCounter;           // Counts what row or column the spikes are on for removal
         int lightningSize;                  // How many rows should the lightning affect
         int waveRow;                        // The current (haha) row the wave is at
         bool isWaveAttackOver;              // The wave attack progress status
@@ -165,7 +166,7 @@ namespace MohawkTerminalGame
                 // Randomize what attack the boss is going to use
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
                 int attackToUse = Random.Integer(0, 3);
-                //int attackToUse = 2;
+                //int attackToUse = 0;
 
                 // Spike attack settings
                 if (attackToUse == 0)
@@ -174,6 +175,7 @@ namespace MohawkTerminalGame
                     // Randomize where the boss will attack
                     RandomizeBossColumn();
                     RandomizeBossRow();
+                    spikePositionCounter = 0;
                     // Determine which direction to shoot the spikes
                     isSpikeVertical = Random.CoinFlip();
                 }
@@ -238,15 +240,16 @@ namespace MohawkTerminalGame
                     }
 
                     // Reset boss attack tiles
-                    if (bossAttackCounter >= 120)
+                    if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Height)
                     {
-                        for (int y = 0; y < map.Height; y++)
-                        {
+                        //for (int y = 0; y < map.Height; y++)
+                        //{
                             // Reset the left row, selected row, and right row
-                            ResetBossAttackTiles(bossAttackColPos - 2, y);
-                            ResetBossAttackTiles(bossAttackColPos, y);
-                            ResetBossAttackTiles(bossAttackColPos + 2, y);
-                        }
+                            ResetBossAttackTiles(bossAttackColPos - 2, spikePositionCounter);
+                            ResetBossAttackTiles(bossAttackColPos, spikePositionCounter);
+                            ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
+                        //}
+                        spikePositionCounter++;
                     }
 
                     // Increase time counter while the boss is using an attack
@@ -277,15 +280,16 @@ namespace MohawkTerminalGame
                     }
 
                     // Reset boss attack tiles
-                    if (bossAttackCounter >= 120)
+                    if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Width * 2)
                     {
-                        for (int x = 0; x < map.Width; x++)
-                        {
+                        //for (int x = 0; x < map.Width; x++)
+                        //{
                             // Reset the left column, selected column, and right columny
-                            ResetBossAttackTiles(x * 2, bossAttackRowPos - 1);
-                            ResetBossAttackTiles(x * 2, bossAttackRowPos);
-                            ResetBossAttackTiles(x * 2, bossAttackRowPos + 1);
-                        }
+                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 1);
+                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos);
+                            ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
+                        //}
+                        spikePositionCounter++;
                     }
 
                     // Increase time counter while the boss is using an attack
