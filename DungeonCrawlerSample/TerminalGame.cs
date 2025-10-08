@@ -164,9 +164,10 @@ namespace MohawkTerminalGame
 
                 // Randomize what attack the boss is going to use
                 // !!! CHANGE THE 3 TO CHECK WHAT STAGE OF THE FIGHT THE BOSS IS IN !!!
-                int attackToUse = Random.Integer(0, 3);
-                //int attackToUse = 2;
+                //int attackToUse = Random.Integer(0, 3);
+                int attackToUse = 2;
 
+                // Spike attack settings
                 if (attackToUse == 0)
                 {
                     currentAttack = "spike";
@@ -177,15 +178,17 @@ namespace MohawkTerminalGame
                     isSpikeVertical = Random.CoinFlip();
                 }
 
+                // Lightning attack settings
                 if (attackToUse == 1)
                 {
                     currentAttack = "lightning";
                     // Randomize where the boss will attack
                     RandomizeBossColumn();
                     // Determine how far down to shoot the lightning
-                    lightningSize = Random.Integer(5, 10);
+                    lightningSize = Random.Integer(7, 13);
                 }
 
+                // Wave attack settings
                 if (attackToUse == 2)
                 {
                     currentAttack = "wave";
@@ -208,8 +211,7 @@ namespace MohawkTerminalGame
                  *    Spike line is 3 columns wide
                  * 2. Warn where the spikes will show up
                  * 3. Spikes show up in warning spots
-                 * 4. Randomize where the next attack will happen
-                 * 5. Reset the tiles affected and boss attacking state
+                 * 4. Reset the tiles affected and boss attacking state
                  */
 
                 // Boss SPIKE ATTACK - VERTICAL
@@ -248,11 +250,8 @@ namespace MohawkTerminalGame
                     }
 
                     // Increase time counter while the boss is using an attack
-                    //if (isBossAttacking)
-                    //{
                     bossSpikeTimer++;
                     bossAttackCounter++;
-                    //}
                 }
                 // Boss SPIKE ATTACK - HORIZONTAL
                 else
@@ -290,11 +289,8 @@ namespace MohawkTerminalGame
                     }
 
                     // Increase time counter while the boss is using an attack
-                    //if (isBossAttacking)
-                    //{
                     bossSpikeTimer++;
                     bossAttackCounter++;
-                    //}
                 }
             } // End of Spike attack
 
@@ -307,8 +303,7 @@ namespace MohawkTerminalGame
                  *    Lightning is 1 tile wide, but affects 9 rows at every other row
                  * 2. Warn where the lightning will strike
                  * 3. Shoot lightning on the warning tiles
-                 * 4. Randomize next attack position
-                 * 5. Reset tiles affected by attack
+                 * 4. Reset tiles affected by attack
                  */
 
                 // Boss warning
@@ -350,11 +345,8 @@ namespace MohawkTerminalGame
                 }
 
                 // Increase time counter while the boss is using an attack
-                if (isBossAttacking)
-                {
-                    bossLightningTimer++;
-                    bossAttackCounter++;
-                }
+                bossLightningTimer++;
+                bossAttackCounter++;
 
             } // End of Lightning attack
 
@@ -363,36 +355,35 @@ namespace MohawkTerminalGame
             {
                 /**
                  * Attack Steps:
-                 * 1. Choose vertical or horizontal (?)
-                 * 2. Warning on the rows or columns that will be affected
+                 * 1. Choose vertical area to be safe
+                 * 2. Warning on all other rows or columns that will be affected
                  * 3. Waves on the warnings
-                 * 4. Randomize next attack position
-                 * 5. Reset tiles affected by attack
+                 * 4. Recede the waves
+                 * 5. Finish attack
                  */
                 // Boss warning
                 if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                 {
-                    // Warn the left row, selected row, and right row
-                    BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
-                    BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
-                    BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
+                    // Warn all columns except the 2 to the left and right where the attack was chosen
+                    //BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning);
+                    //BossAttackEmoji(bossAttackColPos, bossWarningRow, warning);
+                    //BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning);
                     bossWarningRow++;
                 }
 
                 // Boss attack
                 if (bossWaveTimer % 6 == 0 && bossAttackCounter >= 80 && bossAttackRow < map.Height)
                 {
-                    // Attack the left row, selected row, and right row
+                    // Attack the warned rows from above
                     BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, wave);
                     BossAttackEmoji(bossAttackColPos, bossAttackRow, wave);
                     BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, wave);
                     bossAttackRow++;
                 }
 
-                // Reset boss attack tiles
+                // Reset boss attack tiles by reversing the attack
                 if (bossWaveTimer % 4 == 0 && bossAttackCounter >= 200 && waveRow >= 0)
                 {
-                    // Reset the left row, selected row, and right row
                     ResetBossAttackTiles(bossAttackColPos - 2, waveRow);
                     ResetBossAttackTiles(bossAttackColPos, waveRow);
                     ResetBossAttackTiles(bossAttackColPos + 2, waveRow);
@@ -401,15 +392,10 @@ namespace MohawkTerminalGame
                     if (waveRow < 0) isWaveAttackOver = true; // When the wave has fully retracted
                 }
 
-                // Reset the attack state if the wave attack has finished
-                if (isWaveAttackOver) isWaveAttackOver = false;
-
                 // Increase time counter while the boss is using an attack
-                //if (isBossAttacking)
-                //{
                 bossWaveTimer++;
                 bossAttackCounter++;
-                //}
+
             } // End of Wave attack
 
             // ─────────────────────────────────────────────────────────────────────
@@ -543,7 +529,7 @@ namespace MohawkTerminalGame
             if (swordX != -1)
             {
 
-                // EAch cell is two collumns wide
+                // Each cell is two columns wide
                 map.Poke(swordX * CELL_W, swordY, currentSword);
 
                 // Pick it up when the player is on it
