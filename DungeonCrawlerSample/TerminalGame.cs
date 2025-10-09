@@ -41,6 +41,8 @@ namespace MohawkTerminalGame
         private float damageInterval = 1f; // every 3 seconds
         private float damageElapsed = 0f; // total seconds passed
         bool gameOverPrinted = false;
+        private List<string> dialogueLines; // store wrapped lines
+        private int currentLineIndex = 0;   // which line we are typing
         // Jonahs Stuff
 
         // HUD tracking to prevent flicker
@@ -64,7 +66,9 @@ namespace MohawkTerminalGame
         private int dialogueCol = 38;
         private bool isShowingDialogue = false;
         private ConsoleColor dialogueColor = ConsoleColor.White;
-        private int dialogueMaxWidth = 6;
+        private int dialogueMaxWidth = 32;
+        private bool winScreenDrawn = false;
+        private float elapsedTime = 0f; // total time in seconds
         // Joanhs Stuff
 
         // Dot colors (console only supports 16 colors theres no way for hexidecimals; grayscale is fastest and looks the best imo)
@@ -154,7 +158,7 @@ namespace MohawkTerminalGame
             Terminal.CursorVisible = false;
             Terminal.BackgroundColor = ConsoleColor.Black;
 
-            if (gameOver == false)
+            if (!gameOver)
             {
                 // Build a new 15×15 grid (each cell makes two columns)
                 map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
@@ -207,6 +211,12 @@ namespace MohawkTerminalGame
                 int characterX = mapWidth + margin;
                 int characterY = 5;
                 DrawAsciiCharacter(characterX, characterY, rightCharacterArt, ConsoleColor.Red);
+
+                if (!isShowingDialogue)
+                {
+                    StartDialogue("I’ve sent your little sword to another dimension — now all you can do is die by my hand!", ConsoleColor.Red);
+                }
+
             }
 
         }
@@ -214,7 +224,7 @@ namespace MohawkTerminalGame
         public void Execute()
         {
 
-            
+            elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
             if (testDying)
@@ -230,12 +240,15 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                DrawGameOverScreen();
+                DrawWinScreen(elapsedTime);
+                //DrawGameOverScreen();
                 return; // Stop all other updates
             }
             CheckIfDead();
             if (gameOver == false)
             {
+                UpdateDialogue(); // non-blocking dialogue update
+                
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -284,6 +297,10 @@ namespace MohawkTerminalGame
                             spikePositionCounter = 0;
                             // Determine which direction to shoot the spikes
                             isSpikeVertical = Random.CoinFlip();
+                            if (!isShowingDialogue)
+                            {
+                                //StartDialogue("I Cast Spike Attack!", ConsoleColor.Red);
+                            }
                         }
                         // Lightning attack settings
                         else if (attackToUse < 17)
@@ -293,6 +310,7 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Determine how far down to shoot the lightning
                             lightningSize = Random.Integer(7, 13);
+                            //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
                         else if (attackToUse < 20)
@@ -302,6 +320,7 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Reset the wave row
                             waveRow = MAP_HEIGHT - 1;
+                            //StartDialogue("I Cast a Wave!", ConsoleColor.Red);
                         }
                         isBossAttacking = true;
                     }
@@ -309,6 +328,22 @@ namespace MohawkTerminalGame
                 // Increase timer to next attack when not in an attack
                 else
                 {
+                    // ... later, when attack finishes:
+                    if (!isBossAttacking && isShowingDialogue)
+                    {
+                        // Clear the old dialogue from the screen
+                        // Clear the dialogue
+                        /*
+                        if (isShowingDialogue)
+                        {
+                            Console.SetCursorPosition(0, MAP_HEIGHT + 6);
+                            Console.Write(new string(' ', Console.WindowWidth));
+                            isShowingDialogue = false;
+                        }
+                        
+                        isShowingDialogue = false;
+                        */
+                    }
                     bossAttackIntervalCounter++;
                 }
 
@@ -419,6 +454,7 @@ namespace MohawkTerminalGame
                     // Start of Lightning attack
                     if (currentAttack == "lightning")
                     {
+                        StartDialogue("And you forget that my spatial manipulation extends beyond creating dimensions now observe, my power!\r\n", ConsoleColor.Red);
                         /**
                          * Attack Steps:
                          * 1. Choose which columns to affect (choose 1, then every other for x amount of columns)
@@ -477,6 +513,7 @@ namespace MohawkTerminalGame
                     // Start of Wave attack
                     if (currentAttack == "wave")
                     {
+                        StartDialogue("Not so fast you squalid squash you forgot that I haven’t used my most powerful magic yet, my tidal mastery is absolute!\r\n", ConsoleColor.Red);
                         /**
                          * Attack Steps:
                          * 1. Choose vertical area to be safe
@@ -597,6 +634,7 @@ namespace MohawkTerminalGame
                     UpdateHearts();
                     lastDrawnHealth = health;
                 }
+                
                 //BanterDialogueOne();
                 Terminal.ForegroundColor = ConsoleColor.Black;
                 // Clear stray input characters
@@ -614,6 +652,113 @@ namespace MohawkTerminalGame
             }
 
         }
+        private void DrawWinScreen(float totalTimeSeconds)
+        {
+            if (!winScreenDrawn)
+            {
+                Console.Clear();
+
+                string[] winArt = {
+            "                                        _/V\\_",
+            "                                      <[)(O)(]>",
+            "                                        {XXX}",
+            "                                        {XXX}",
+            "                                        {XXX}",
+            "                                        {XXX}",
+            "                                    ___<MMMMMMM>___",
+            "                                  /______((I))______\\",
+            "        ___        ___  ___  _______  |________| _________   ________    ___   ___",
+            "       \\--\\      /—-/ |--| | _____| |___  ___|  |  ___  |   |-------|   \\--\\  /—-/",
+            "        \\--\\    /—-/  |--| |--|       |--|  |   |--| |--|   |-------|    \\--\\/—-/",
+            "         \\--\\  /—-/   |--| |--|       |--|  |   |--| |--|   |--|\\--\\      \\----/",
+            "          \\--\\/—-/    |--| |--|____   |--|  |   |--| |--|   |--| \\--\\      |--|",
+            "           \\____ /     |__| |______|   |__|  |   |_______|   |__|  \\__\\     |__|",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                        | |  |",
+            "                                         \\\\  /",
+            "                                          \\/"
+        };
+
+                // Instructions
+                string[] instructions = {
+            "Press R to Restart",
+            "Press Q to Quit"
+        };
+
+                // Compute score
+                int maxScore = 1000;
+                int score = Math.Max(0, maxScore - (int)(totalTimeSeconds * 5));
+                string timeText = $"Time: {totalTimeSeconds:F2}s";
+                string scoreText = $"Speed Score: {score}";
+
+                // Console dimensions
+                int winW = Console.WindowWidth;
+                int winH = Console.WindowHeight;
+                int artW = winArt.Max(l => l.Length);
+                int artH = winArt.Length;
+
+                // Center art
+                int startX = Math.Max(0, (winW - artW) / 2);
+                int startY = Math.Max(0, (winH - artH - 2) / 2); // leave space for stats
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                for (int i = 0; i < winArt.Length; i++)
+                {
+                    int y = startY + i;
+                    if (y < winH)
+                    {
+                        Console.SetCursorPosition(startX, y);
+                        Console.Write(winArt[i]);
+                    }
+                }
+
+                // Draw time and score just above instructions
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                int statsY = winH - instructions.Length - 3; // 3 lines above bottom for spacing
+                Console.SetCursorPosition(2, statsY);
+                Console.Write(timeText);
+                Console.SetCursorPosition(2, statsY + 1);
+                Console.Write(scoreText);
+
+                // Draw instructions stacked in bottom right corner
+                Console.ForegroundColor = ConsoleColor.Green;
+                for (int i = 0; i < instructions.Length; i++)
+                {
+                    int y = winH - instructions.Length + i - 1; // bottom-right alignment
+                    Console.SetCursorPosition(winW - instructions[i].Length - 2, y);
+                    Console.Write(instructions[i]);
+                }
+
+                Console.ResetColor();
+                winScreenDrawn = true;
+
+                // Input handling
+                bool waiting = true;
+                while (waiting)
+                {
+                    if (Input.IsKeyPressed(ConsoleKey.R))
+                    {
+                        RestartGame();
+                        winScreenDrawn = false;
+                        waiting = false;
+                    }
+                    else if (Input.IsKeyPressed(ConsoleKey.Q))
+                    {
+                        Environment.Exit(0);
+                    }
+                }
+            }
+        }
+
         public void ShowIntroWithDialogue()
         {
             Terminal.Clear();
@@ -703,80 +848,121 @@ namespace MohawkTerminalGame
             Terminal.Write("Press any key to start...");
             Console.ReadKey(true);
         }
-        // helper used before printing to position where boss dialogue should start
-        private void SetCursorPosForBossDialogue()
+
+        private void StartDialogue(string text, ConsoleColor color)
         {
-            // keep your existing implementation, e.g.:
-            // Terminal.SetCursorPosition(48, 16);
-            // For this example I'll place the dialogue at col 25, row 12:
-            Terminal.SetCursorPosition(38, 12);
+            currentDialogue = text;
+            dialogueCharIndex = 0;
+            dialogueRow = 12;  // starting row
+            dialogueCol = 38;  // starting column
+            dialogueColor = color;
+
+            // Wrap the text into word-safe lines
+            dialogueLines = WrapText(currentDialogue, dialogueMaxWidth);
+            currentLineIndex = 0;
+            isShowingDialogue = true;
         }
 
-        // helper: simple word-wrapping
+        private void UpdateDialogue()
+        {
+            if (!isShowingDialogue || gameOver) return; // Don't show dialogue if game is over
+            if (!isShowingDialogue) return;
+
+            Terminal.ForegroundColor = dialogueColor;
+
+            if (currentLineIndex >= dialogueLines.Count)
+            {
+                // Finished all lines
+                isShowingDialogue = false;
+                return;
+            }
+
+            string currentLine = dialogueLines[currentLineIndex];
+
+            // Print a few characters per frame
+            int charsPerFrame = 2;
+            for (int i = 0; i < charsPerFrame && dialogueCharIndex < currentLine.Length; i++, dialogueCharIndex++)
+            {
+                Terminal.SetCursorPosition(dialogueCol, dialogueRow);
+                Terminal.Write(currentLine[dialogueCharIndex]);
+                dialogueCol++;
+            }
+
+            // If finished current line, move to next
+            if (dialogueCharIndex >= currentLine.Length)
+            {
+                dialogueCharIndex = 0;
+                dialogueCol = 38; // reset X
+                dialogueRow++;
+                currentLineIndex++;
+            }
+        }
+
+        
         private static List<string> WrapText(string text, int maxWidth)
         {
             var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var lines = new List<string>();
-            var sb = new StringBuilder();
+            var currentLine = new StringBuilder();
 
-            foreach (var w in words)
+            foreach (var word in words)
             {
-                if (sb.Length + w.Length + (sb.Length > 0 ? 1 : 0) > maxWidth)
+                // If adding the next word exceeds maxWidth, wrap to a new line
+                if (currentLine.Length + word.Length + (currentLine.Length > 0 ? 1 : 0) > maxWidth)
                 {
-                    lines.Add(sb.ToString());
-                    sb.Clear();
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
                 }
 
-                if (sb.Length > 0) sb.Append(' ');
-                sb.Append(w);
+                if (currentLine.Length > 0)
+                    currentLine.Append(' '); // add space between words
+
+                currentLine.Append(word);
             }
 
-            if (sb.Length > 0) lines.Add(sb.ToString());
+            // Add any remaining text
+            if (currentLine.Length > 0)
+                lines.Add(currentLine.ToString());
+
             return lines;
         }
 
+        /*
         private void ShowBossDialogueRightSide(string text,
-                                       int maxWidth = 6, // max chars in the side column
+                                       int maxWidth = 60, // characters per line
                                        int charDelayMs = 8,
                                        ConsoleColor color = ConsoleColor.White,
                                        int linePauseMs = 250,
                                        int startRow = 12,
-                                       int startCol = 38,
-                                       int maxCol = 44)
+                                       int startCol = 38)
         {
             int cursorY = startRow;
             int cursorX = startCol;
 
-            // Wrap text into lines that fit the right-side width
-            var lines = WrapText(text, maxWidth);
+            var lines = WrapText(text, maxWidth); // wrap text properly by words
 
             var originalColor = Terminal.ForegroundColor;
             Terminal.ForegroundColor = color;
 
             foreach (var line in lines)
             {
-                // Check if the line fits in maxCol, otherwise move to next row
-                if (cursorX + line.Length > maxCol)
-                {
-                    cursorX = startCol;  // reset X to start
-                    cursorY++;           // move down a row
-                }
-
+                cursorX = startCol; // reset X at start of each line
                 Terminal.SetCursorPosition(cursorX, cursorY);
 
-                // Typewriter effect
                 foreach (var c in line)
                 {
                     Terminal.Write(c);
                     if (charDelayMs > 0) System.Threading.Thread.Sleep(charDelayMs);
+                    cursorX++;
                 }
 
-                cursorY++; // move down for the next line
+                cursorY++; // move to next line
                 if (linePauseMs > 0) System.Threading.Thread.Sleep(linePauseMs);
             }
 
             Terminal.ForegroundColor = originalColor;
         }
+        
         // now implement the three banter methods using the helper
         private void BanterDialogueOne()
         {
@@ -810,36 +996,98 @@ namespace MohawkTerminalGame
                 linePauseMs: 200
             );
         }
+        */
         private void DrawGameOverScreen()
         {
             if (!gameOverScreenDrawn)
             {
                 Console.Clear();
-                int centerX = MAP_WIDTH;
-                int centerY = MAP_HEIGHT / 2;
+
+                string gameOverText = "GAME OVER";
+                string[] instructions = {
+            "█  Press R to Retry █",
+            "█  Press Q to Quit  █"
+        };
+
+                string[] skull = {
+            "____________ ____________  _____     _____        __________",
+            "/           //   ___     //     |   /     |\\     /         /\\",
+            "/   ________//   /  /    //  /|  |  /  /|  | \\    /   ______/  \\",
+            "/   /\\      //   /__/    //  / |  | /  / |  |  \\  /   /_\\___ \\   \\",
+            "/   /  \\___ //   ____    //  /  |  |/  /  |  |   \\/         /\\ \\   \\",
+            "/   /  /_   //   /   /   //  /   |_____/   |  |   /    _____/  \\ \\   \\",
+            "/   /____/  //   /   /   //  /     \\    \\   |  |  /    /_\\__ \\   \\ \\   \\",
+            "/           //   /   /   //  /       \\    \\  |  | /         /\\ \\   \\ \\   \\",
+            "/___________//___/___/___//__/      ___\\ ___\\_|__|/___________/\\ \\   \\ \\ \\  /",
+            "\\           /           /|    |\\   /   //         //  _____  \\  \\ \\   \\ \\/",
+            " \\         /   ____    / |    | \\ /   //   ______//  /    /  /\\  \\ \\   \\",
+            "  \\       /   /\\  /   /  |    |  /   //   /_____ /  /____/  /  \\  \\ \\  /",
+            "   \\     /   /  \\/   /   |    | /   //         //   __     /    \\  \\ \\/",
+            "    \\   /   /   /   /    |    |/   //   ______//   /  |   |\\     \\  \\",
+            "     \\ /   /___/   /     |        //   /_____ /   /   |   | \\     \\ /",
+            "      /          /       |       //         //  /    |   |  \\     \\",
+            "     /___________/        |______//_________//___/     |___|   \\     \\",
+            "     \\           \\        \\     \\ \\        \\ \\  \\      \\   \\   \\    /",
+            "      \\           \\        \\     \\ \\        \\ \\  \\      \\   \\   \\  /",
+            "       \\           \\      / \\     \\ \\        \\ \\  \\      \\   \\   \\/",
+            "        \\           \\    /   \\     \\ \\        \\ \\  \\    / \\   \\  |",
+            "         \\           \\  /     \\     \\ \\        \\ \\  \\  /   \\   \\ |",
+            "          \\___________\\/        \\_____\\/\\________\\/\\__\\/      \\___\\|"
+        };
+
+                int winW = Console.WindowWidth;
+                int winH = Console.WindowHeight;
+
+                int skullW = skull.Max(l => l.Length);
+                int instrW = instructions.Max(l => l.Length);
+                int textW = gameOverText.Length;
+
+                // Horizontal positions
+                int padding = 4;
+                int skullX = winW - skullW - 2;
+                int textX = padding;
+                int instrX = padding;
+
+                // Vertical centering
+                int skullH = skull.Length;
+                int instrH = instructions.Length;
+                int totalH = Math.Max(skullH, instrH + 1); // +1 for game over text
+                int startY = Math.Max(0, (winH - totalH) / 2);
 
                 Console.ForegroundColor = ConsoleColor.Red;
 
-                string[] gameOverText = new string[]
-                {
-            "█████████████████████",
-            "█     GAME OVER     █",
-            "█  Press R to Retry █",
-            "█  Press Q to Quit  █",
-            "█████████████████████"
-                };
+                // Draw GAME OVER text above instructions
+                int yText = startY;
+                Console.SetCursorPosition(textX, yText);
+                Console.Write(gameOverText);
 
-                for (int i = 0; i < gameOverText.Length; i++)
+                // Draw instructions below GAME OVER
+                for (int i = 0; i < instructions.Length; i++)
                 {
-                    Console.SetCursorPosition(centerX - gameOverText[i].Length / 2, centerY - gameOverText.Length / 2 + i);
-                    Console.Write(gameOverText[i]);
+                    int y = startY + 1 + i;
+                    if (y < winH)
+                    {
+                        Console.SetCursorPosition(instrX, y);
+                        Console.Write(instructions[i]);
+                    }
+                }
+
+                // Draw skull
+                for (int i = 0; i < skull.Length; i++)
+                {
+                    int y = startY + i;
+                    if (y < winH)
+                    {
+                        Console.SetCursorPosition(skullX, y);
+                        Console.Write(skull[i]);
+                    }
                 }
 
                 Console.ResetColor();
                 gameOverScreenDrawn = true;
             }
 
-            // Input handling stays the same
+            // Input handling
             if (Input.IsKeyPressed(ConsoleKey.R))
             {
                 RestartGame();
@@ -850,6 +1098,7 @@ namespace MohawkTerminalGame
                 Environment.Exit(0);
             }
         }
+
         private void RestartGame()
         {
             health = maxHealth;
