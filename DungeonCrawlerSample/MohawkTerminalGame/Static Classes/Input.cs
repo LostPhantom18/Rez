@@ -107,7 +107,7 @@ namespace MohawkTerminalGame
                     if (Program.TerminalInputMode != TerminalInputMode.EnableInputDisableReadLine)
                         continue;
 
-                    ConsoleKeyInfo consoleKeyInfo = Console.ReadKey();
+                    ConsoleKeyInfo consoleKeyInfo = Console.ReadKey(true);
                     if (consoleKeyInfo.Key != ConsoleKey.None)
                     {
                         CurrentFrameKeys.Add(consoleKeyInfo.Key);

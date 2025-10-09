@@ -625,7 +625,7 @@ namespace MohawkTerminalGame
                     bossAttackInterval -= 60;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
-                    // OnSwordDeflected();
+                    OnSwordDeflected();
                 }
 
                 /*
