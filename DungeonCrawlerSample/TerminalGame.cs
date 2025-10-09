@@ -177,6 +177,7 @@ namespace MohawkTerminalGame
 
         bool[,] attackArray;                // Memory for where the boss is currently attacking
         int bossPhase;                      // Weighting for the boss attacks based on the phase
+        int bossFinalPhaseCounter;          // Counter during the final boss phase to make attacks more frequent
         bool playerHasSword;                // If the player has the sword
 
 
@@ -291,7 +292,7 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                if (bossAttackInterval < 40) DrawWinScreen(elapsedTime);
+                if (bossPhase > 20) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -338,7 +339,7 @@ namespace MohawkTerminalGame
                         int attackToUse = Random.Integer(0, bossPhase);
 
                         // Spike attack settings
-                        if (attackToUse < 10)
+                        if (attackToUse < 13)
                         {
                             currentAttack = "spike";
                             // Randomize where the boss will attack
@@ -361,7 +362,7 @@ namespace MohawkTerminalGame
                             }
                         }
                         // Lightning attack settings
-                        else if (attackToUse < 17)
+                        else if (attackToUse < 22)
                         {
                             currentAttack = "lightning";
                             // Randomize where the boss will attack
@@ -379,7 +380,7 @@ namespace MohawkTerminalGame
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
-                        else if (attackToUse < 20)
+                        else if (attackToUse < 30)
                         {
                             currentAttack = "wave";
                             // Randomize where the boss will attack
@@ -688,6 +689,14 @@ namespace MohawkTerminalGame
                 if (PlayerInDanger() && !playerHasSword)
                 {
                     ChangeHealth(-1);
+                    // Get rid of tiles all around player so they don't immediately take more damage
+                    //for (int i = -1; i < 2; i++)
+                    //{
+                    //    for (int j = -1;  j < 2; j++)
+                    //    {
+                    //        ResetBossAttackTiles((playerX + i) * 2, playerY + j);
+                    //    }
+                    //}
                     ResetBossAttackTiles(playerX * 2, playerY);
                 }
                 // Player delfects an attack when they have the sword
@@ -695,21 +704,33 @@ namespace MohawkTerminalGame
                 {
                     ResetBossAttackTiles(playerX * 2, playerY);
                     playerHasSword = false;
-                    bossPhase += 5;
+                    bossPhase += 10;
                     bossAttackInterval -= 60;
 
                     // Check if the boss is defeated
-                    if (bossAttackInterval < 40) gameOver = true;
+                    if (bossPhase > 20) gameOver = true;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
                 }
 
+                // Increase the boss attack frequency while they are on final phase
+                if (bossPhase >= 15 && bossAttackInterval > 0)
+                {
+                    bossFinalPhaseCounter++;
+                    // Every 5 seconds, decrease time between attacks by 10 frames
+                    // 4 cycles to get to max attack rate
+                    if (bossFinalPhaseCounter >= 300 && bossAttackInterval > 0)
+                    {
+                        bossFinalPhaseCounter = 0;
+                        bossAttackIntervalCounter -= 10;
+                    }
+                }
 
                 if (Input.IsKeyPressed(ConsoleKey.J))
                 {
                     //gameOver = true;
-                    bossPhase += 5;
+                    bossPhase += 10;
                     bossAttackInterval -= 60;
                 }
                 /*
