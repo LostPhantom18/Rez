@@ -52,7 +52,43 @@ namespace MohawkTerminalGame
         private string lastTimePosText = string.Empty;
         private string lastColRowText = string.Empty;
 
-        string[] rightCharacterArt = new string[]
+        string[] rightCharacterArtIdle = new string[]
+{
+"                   ",
+"      Á            ",
+"    _/-\\_         ",
+"    {òʘó} *        ",
+"   <[ : ]\\|       ",
+"     v v  |        "
+};
+        string[] rightCharacterArtWave = new string[]
+{
+"                    ",
+"                 Á  ",
+"     ,__   _/-\\_    ",
+" __’ ) \\   {òʘó} ¡  ",
+"’) \\/   \\ <[ : ]\\|",
+"/  /     \\  v v  | ",
+};
+        string[] rightCharacterArtLightning = new string[]
+{
+" \\ \\               ",
+"  //  Á              ",
+"  V _/-\\_           ",
+"    {òʘó} ¡          ",
+"   <[ : ]\\|         ",
+"     v v  |          "
+};
+        string[] rightCharacterArtSpike = new string[]
+{
+"        \\\\ v//      ",
+"      Á  \\V/       ",
+"    _/-\\_ V        ",
+"    {òʘó} ¡         ",
+"   <[ : ]\\|        ",
+"     v v  |         "
+};
+        string[] rightCharacterArtHurt = new string[]
 {
     "     \\ v//",
     "   Á  \\V/",
@@ -116,7 +152,7 @@ namespace MohawkTerminalGame
         // ─────────────────────────────────────────────────────────────────────
         // BOSS AI STORAGE
         // ─────────────────────────────────────────────────────────────────────
-        
+
         int bossSpikeTimer;             // Timer for spike attack
         int bossLightningTimer;         // Timer for lightning attack
         int bossWaveTimer;              // Timer for wave attack
@@ -142,7 +178,7 @@ namespace MohawkTerminalGame
         bool[,] attackArray;                // Memory for where the boss is currently attacking
         int bossPhase;                      // Weighting for the boss attacks based on the phase
         bool playerHasSword;                // If the player has the sword
-        
+
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -225,7 +261,7 @@ namespace MohawkTerminalGame
                 int margin = 15;
                 int characterX = mapWidth + margin;
                 int characterY = 5;
-                DrawAsciiCharacter(characterX, characterY, rightCharacterArt, ConsoleColor.Red);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
 
                 if (!isShowingDialogue)
                 {
@@ -311,6 +347,14 @@ namespace MohawkTerminalGame
                             spikePositionCounter = 0;
                             // Determine which direction to shoot the spikes
                             isSpikeVertical = Random.CoinFlip();
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtSpike, ConsoleColor.Red);
+
                             if (!isShowingDialogue)
                             {
                                 //StartDialogue("I Cast Spike Attack!", ConsoleColor.Red);
@@ -324,6 +368,14 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Determine how far down to shoot the lightning
                             lightningSize = Random.Integer(7, 13);
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtLightning, ConsoleColor.Red);
+
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
@@ -334,6 +386,14 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Reset the wave row
                             waveRow = MAP_HEIGHT - 1;
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtWave, ConsoleColor.Red);
+
                             //StartDialogue("I Cast a Wave!", ConsoleColor.Red);
                         }
                         isBossAttacking = true;
@@ -548,6 +608,7 @@ namespace MohawkTerminalGame
                          * 4. Recede the waves
                          * 5. Finish attack
                          */
+
                         // Boss warning
                         if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                         {
@@ -645,11 +706,12 @@ namespace MohawkTerminalGame
                 }
 
 
-                //if (Input.IsKeyPressed(ConsoleKey.J))
-                //{
-                //    gameOver = true;
-                //    bossAttackInterval -= 60;
-                //}
+                if (Input.IsKeyPressed(ConsoleKey.J))
+                {
+                    //gameOver = true;
+                    bossPhase += 5;
+                    bossAttackInterval -= 60;
+                }
                 /*
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
@@ -1235,6 +1297,13 @@ namespace MohawkTerminalGame
             if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
             map.Poke(x, y, map.Get(x / 2, y));
             attackArray[x, y] = false;
+
+            // Draw static right-side ASCII character using this attack
+            int mapWidth = MAP_WIDTH * CELL_W;
+            int margin = 15;
+            int characterX = mapWidth + margin;
+            int characterY = 5;
+            DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
         }
 
         // Randomize boss attack column (X value)
