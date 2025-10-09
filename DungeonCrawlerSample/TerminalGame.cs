@@ -1360,8 +1360,8 @@ namespace MohawkTerminalGame
             if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
             if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
-            playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
-            playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
+            playerX = Math.Clamp(playerX, 1, MAP_WIDTH - 2);
+            playerY = Math.Clamp(playerY, 1, MAP_HEIGHT - 2);
 
             if (oldPlayerX != playerX || oldPlayerY != playerY)
                 inputChanged = true;
