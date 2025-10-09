@@ -192,6 +192,8 @@ namespace MohawkTerminalGame
 
                 nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
 
+                DrawInventory();
+
                 // Draw static right-side ASCII character (only once)
                 int mapWidth = MAP_WIDTH * CELL_W;
                 int margin = 15;
@@ -564,6 +566,9 @@ namespace MohawkTerminalGame
                     playerHasSword = false;
                     bossPhase += 5;
                     bossAttackInterval -= 60;
+
+                    // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
+                    // OnSwordDeflected();
                 }
 
                 /*
@@ -576,6 +581,8 @@ namespace MohawkTerminalGame
                 Terminal.ForegroundColor = ConsoleColor.Black;
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 5);
                 */
+
+
                 UpdateHUD();
 
                 if (health != lastDrawnHealth)
@@ -854,34 +861,63 @@ namespace MohawkTerminalGame
         int swordY = -1; // Cell position -1 just off the map     
         ColoredText currentSword = null!; // Which emoji is spawned (while the current item is not nothing)
 
+        int collectedCounter = 0; // How many collected
+        int hudRowInventory = MAP_HEIGHT + 4; // Where to draw the inventory hud
+        int hudRowAnnouncment = MAP_HEIGHT + 5;
+
         ColoredText[] swordParts = new ColoredText[3]; // Array for emojis (sword parts)
         int swordIndex = 0; // To know what part of the sword you are on
 
+        bool swordAnnouncmentShown = false;
+        string swordAnnouncmentText = "SWORD COLLECTED - DESTROY AND DEFLECT THE WIZARD!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
+
         void SwordPartsTick()
         {
+            // Pause all the items spawning until deflect resets it
+            if (playerHasSword)
+            {
+                // Keep the banner visible but do not spawn anything
+                return; 
+            }
             // If a part is on the map then make it and allow it to be picked up
             if (swordX != -1)
             {
-                // Each cell is two columns wide
+                // Keep the item on the map visible
                 map.Poke(swordX * CELL_W, swordY, currentSword);
 
-                // Pick it up when the player is on it
+                // Pickup when the player steps on it
                 if (playerX == swordX && playerY == swordY)
                 {
-                    DrawCharacter(swordX, swordY, player);  // Reset it to original .
-                    swordX = -1; // Cell position back to -1 just off the map
-                    swordY = -1; // Cell position back to -1 just off the map
+                    ResetCell(swordX, swordY);  // Change to original form
+                    swordX = -1;
+                    swordY = -1;
 
-                    swordIndex++; // +1 to swordIndex for next sword part
+                    // Update as collected and update the UI
+                    collectedCounter++;
+                    DrawInventory();
 
-                    if (swordIndex >= swordParts.Length)
+                    if (collectedCounter >= swordParts.Length)
                     {
+                        // All 3 collected means player has the sword
                         playerHasSword = true;
-                        swordIndex = 0;
+
+                        // Sgow announcment once
+                        if (!swordAnnouncmentShown)
+                        {
+                            ShowSwordAnnouncment();
+                            swordAnnouncmentShown = true;
+                        }
+
+                    }
+                    else
+                    {
+                        // Move to next item in the order 
+                        swordIndex++;
+                        if (swordIndex >= swordParts.Length) swordIndex = 0;
                     }
                 }
 
-                return; // Dont allow the timer to go when the sword part is on the grid
+                return; // Do not advance the timer while an item is active
             }
 
             // No part active so count up every frame
@@ -902,6 +938,59 @@ namespace MohawkTerminalGame
                 nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
             }
         }
+
+        void DrawInventory()
+        {
+            // Clear the line
+            Terminal.SetCursorPosition(0, hudRowInventory);
+            Console.ResetColor();
+            Console.Write(new string(' ', 100));
+            Terminal.SetCursorPosition(0, hudRowInventory);
+
+            // Collected text
+            Terminal.Write("Collected: ");
+
+            // Show filled slots first, then empties as a box
+            for (int i = 0; i < swordParts.Length; i++)
+            {
+                if (i < collectedCounter)
+                    Terminal.Write(swordParts[i].text + " ");
+                else
+                    Terminal.Write("⬜ ");
+            }
+        }
+
+        void ShowSwordAnnouncment()
+        {
+            // Center the announcment below the HUD
+            int screenCols = MAP_WIDTH * CELL_W; // Console columns used by the map
+            int x = Math.Max(0, (screenCols - swordAnnouncmentText.Length) / 2);
+            int y = hudRowAnnouncment;
+
+            Terminal.SetCursorPosition(0, y);
+            Console.Write(new string(' ', 120)); // Clear line
+
+            Terminal.SetCursorPosition(x, y);
+            Terminal.Write(swordAnnouncmentText, ConsoleColor.Yellow); // You guys can change the color this is also just temporary
+        }
+
+        // Call this when the sword gets used/deflected to resume the randomized spawns of the sword parts
+        void OnSwordDeflected()
+        {
+            // Clear the accouncement line
+            Terminal.SetCursorPosition(0, hudRowAnnouncment);
+            Console.Write(new string(' ', 120));
+            swordAnnouncmentShown = false;
+
+            // Reset inventory to empty for the next phaze
+            collectedCounter = 0;
+            DrawInventory();
+
+            // Resume item spawn timer
+            swordTimer = 0;
+            nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+        }
+
         void CheckIfDead()
         {
             if (health <= 0)
