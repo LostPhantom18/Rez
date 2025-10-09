@@ -85,8 +85,11 @@ namespace MohawkTerminalGame
 
         // --- Floor and Wall ---
         // Floor and wall tiles are 2 characters wide because Emojis are 2 characters wide
-        ColoredText floorTile = new(@"  ", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText floorTile = new(@"  ", ConsoleColor.Yellow, ConsoleColor.Black);
         ColoredText wallTile = new(@"██", ConsoleColor.White, ConsoleColor.Black);
+
+        ColoredText floorLight = new(@"  ", ConsoleColor.Yellow, ConsoleColor.Black);
+        ColoredText floorDark = new(@"  ", ConsoleColor.DarkGray, ConsoleColor.Black);
 
         // --- Player ---
         ColoredText player = new(@"💀", ConsoleColor.White, ConsoleColor.Black);
@@ -161,9 +164,19 @@ namespace MohawkTerminalGame
             if (!gameOver)
             {
                 // Build a new 15×15 grid (each cell makes two columns)
-                map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorTile);
+                map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorLight);
 
-                //for (int i = 0; i < MAP_WIDTH; i += 3)
+                // Fill the board with a checkered pattern
+                // fill with checkered pattern
+                for (int y = 0; y < MAP_HEIGHT; y++)
+                {
+                    for (int x = 0; x < MAP_WIDTH; x++)
+                    {
+                        var tile = ((x + y) % 2 == 0) ? floorLight : floorDark;
+                        map.Poke(x, y, tile);
+                    }
+                }
+
                 //{
                 map.SetCol(wallTile, 0);
                 map.SetCol(wallTile, MAP_WIDTH - 1);
@@ -183,7 +196,7 @@ namespace MohawkTerminalGame
 
                 // Rendering
                 map.ClearWrite();
-
+                // render the map once
                 // Put player on top 
                 DrawCharacter(playerX, playerY, player);
 
