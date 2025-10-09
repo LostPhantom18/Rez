@@ -1309,14 +1309,35 @@ namespace MohawkTerminalGame
         // Randomize boss attack column (X value)
         void RandomizeBossColumn()
         {
-            // Multiply by 2 because emojis are 2-wide characters
-            bossAttackColPos = Random.Integer(0, MAP_WIDTH) * 2;
+            int previousColumn = bossAttackColPos;
+
+            // So the boss doesn't attack the same position twice in a row
+            while (previousColumn == bossAttackColPos)
+            {
+                previousColumn = bossAttackColPos;
+                // Multiply by 2 because emojis are 2-wide characters
+                if (currentAttack != "wave")
+                {
+                    bossAttackColPos = Random.Integer(playerX - 1, playerX + 1) * 2;
+                }
+                else
+                {
+                    bossAttackColPos = Random.Integer(0, MAP_WIDTH) * 2;
+                }
+            }
         }
 
         // Randomize boss attack row (Y value)
         void RandomizeBossRow()
         {
-            bossAttackRowPos = Random.Integer(0, 15);
+            int previousRow = bossAttackRowPos;
+
+            // So the boss doesn't attack the same position twice in a row
+            while (previousRow == bossAttackRowPos)
+            {
+                previousRow = bossAttackRowPos;
+                bossAttackRowPos = Random.Integer(playerY - 1, playerY + 1);
+            }
         }
 
         // Resets the boss attacking state so it can attack again
