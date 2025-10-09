@@ -383,9 +383,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                             {
                                 // Warn the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning, false);
+                                BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning, false);
                                 bossWarningRow++;
                             }
 
@@ -393,9 +395,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackRow < map.Height)
                             {
                                 // Attack the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike, true);
+                                BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, spike, true);
                                 bossAttackRow++;
                             }
 
@@ -403,9 +407,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Height)
                             {
                                 // Reset the left row, selected row, and right row
+                                ResetBossAttackTiles(bossAttackColPos - 4, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos - 2, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
+                                ResetBossAttackTiles(bossAttackColPos + 4, spikePositionCounter);
                                 spikePositionCounter++;
 
                                 if (spikePositionCounter >= map.Height)
@@ -426,9 +432,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
                             {
                                 // Warn the left column, selected column, and right column
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 2, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning, false);
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 2, warning, false);
                                 bossWarningCol++;
                             }
 
@@ -436,9 +444,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackCol < map.Width)
                             {
                                 // Attack the left column, selected column, and right column
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 2, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike, true);
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 2, spike, true);
                                 bossAttackCol++;
                             }
 
@@ -446,9 +456,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Width * 2)
                             {
                                 // Reset the left column, selected column, and right columny
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 2);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 1);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 2);
                                 spikePositionCounter++;
 
                                 if (spikePositionCounter >= map.Width * 2)
@@ -1432,6 +1444,7 @@ namespace MohawkTerminalGame
 
             // Reset inventory to empty for the next phaze
             collectedCounter = 0;
+            swordIndex = 0;
             DrawInventory();
 
             // Resume item spawn timer
