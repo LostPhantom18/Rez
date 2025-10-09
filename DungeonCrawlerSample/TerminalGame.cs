@@ -253,8 +253,8 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                DrawWinScreen(elapsedTime);
-                //DrawGameOverScreen();
+                //DrawWinScreen(elapsedTime);
+                DrawGameOverScreen();
                 return; // Stop all other updates
             }
             CheckIfDead();
