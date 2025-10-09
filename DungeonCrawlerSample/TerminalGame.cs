@@ -1,9 +1,10 @@
-using DungeonCrawlerSample;
-using DungeonCrawlerSample.MohawkTerminalGame.NewClasses;
 using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Text;
+using DungeonCrawlerSample;
+using DungeonCrawlerSample.MohawkTerminalGame.NewClasses;
 
 namespace MohawkTerminalGame
 {
@@ -57,7 +58,13 @@ namespace MohawkTerminalGame
     "<[ : ]\\| ",
     "  v v  |  "
 };
-
+        private string currentDialogue = "";
+        private int dialogueCharIndex = 0;
+        private int dialogueRow = 12;
+        private int dialogueCol = 38;
+        private bool isShowingDialogue = false;
+        private ConsoleColor dialogueColor = ConsoleColor.White;
+        private int dialogueMaxWidth = 6;
         // Joanhs Stuff
 
         // Dot colors (console only supports 16 colors theres no way for hexidecimals; grayscale is fastest and looks the best imo)
@@ -135,7 +142,7 @@ namespace MohawkTerminalGame
         /// Run once before Execute begins
         public void Setup()
         {
-            BanterDialogueOne();
+            //BanterDialogueOne();
             damageTimerStart = DateTime.Now;
             // Run the game steady by using the timer loop (made by raph)
             Program.TerminalExecuteMode = TerminalExecuteMode.ExecuteTime;
@@ -207,8 +214,8 @@ namespace MohawkTerminalGame
         public void Execute()
         {
 
-            BanterDialogueOne();
-            BanterDialogueTwo();
+            
+            //BanterDialogueTwo();
 
             if (testDying)
             {
@@ -590,6 +597,7 @@ namespace MohawkTerminalGame
                     UpdateHearts();
                     lastDrawnHealth = health;
                 }
+                //BanterDialogueOne();
                 Terminal.ForegroundColor = ConsoleColor.Black;
                 // Clear stray input characters
                 /*
@@ -606,23 +614,201 @@ namespace MohawkTerminalGame
             }
 
         }
+        public void ShowIntroWithDialogue()
+        {
+            Terminal.Clear();
+            Terminal.SetCursorPosition(24, 5);
+
+            string[] introArt = new string[]
+            {
+        "_________________________________ ",
+        "| _______________________________ |\\",
+        "| \\______   \\_   _____/\\____    / | \\",
+        "|  |       _/|    __)_   /     /  | ||",
+        "|  |    |   \\|        \\ /     /_  | ||",
+        "|  |____|_  /_______  //_______ \\ | ||",
+        "|         \\/        \\/         \\/ | ||",
+        "|_________________________________| ||",
+        " \\_________________________________\\||",
+        "  \\_________________________________\\|"
+            };
+
+            // Draw the intro art
+            for (int i = 0; i < introArt.Length; i++)
+            {
+                Terminal.SetCursorPosition(36, i);
+                Terminal.WriteLine(introArt[i]);
+            }
+
+            // Dialogue lines
+            string[] dialogue = new string[]
+            {
+        "Rain pours as you stand before the dark wizard Akunin’s tower. \"The elements seem to sense the gravity of this,\" you think, reflecting on how you arrived here. You recall kneeling before King Koning, who, with worry in his eyes, tasked you, a holy knight, with slaying the vile wizard. It was a mission you knew would come. Now, standing at the door, you take a deep breath, then kick it off its hinges, ready to face the fate ahead.",
+        "Prepare yourself for the Wizard Tower challenge!",
+        "The boss waits for no one... are you ready?"
+            };
+
+            int dialogueStartRow = introArt.Length + 2;
+            int dialogueX = 25;
+            int maxLineWidth = 70; // max chars per line for terminal
+
+            double totalTime = 14; // seconds
+            double timePerLine = totalTime / dialogue.Length;
+
+            foreach (string paragraph in dialogue)
+            {
+                // Add an empty line before each paragraph for spacing
+                dialogueStartRow++;
+
+                // Word-wrap the paragraph
+                var words = paragraph.Split(' ');
+                StringBuilder lineBuilder = new();
+                foreach (var word in words)
+                {
+                    if (lineBuilder.Length + word.Length + 1 > maxLineWidth)
+                    {
+                        // Print current line
+                        Terminal.SetCursorPosition(dialogueX, dialogueStartRow++);
+                        Terminal.ForegroundColor = ConsoleColor.White;
+                        foreach (char c in lineBuilder.ToString())
+                        {
+                            Terminal.Write(c);
+                            System.Threading.Thread.Sleep(30); // typewriter
+                        }
+                        lineBuilder.Clear();
+                    }
+                    if (lineBuilder.Length > 0) lineBuilder.Append(' ');
+                    lineBuilder.Append(word);
+                }
+
+                // Print remaining line
+                if (lineBuilder.Length > 0)
+                {
+                    Terminal.SetCursorPosition(dialogueX, dialogueStartRow++);
+                    Terminal.ForegroundColor = ConsoleColor.White;
+                    foreach (char c in lineBuilder.ToString())
+                    {
+                        Terminal.Write(c);
+                        System.Threading.Thread.Sleep(30);
+                    }
+                }
+
+                // Wait before next paragraph
+                System.Threading.Thread.Sleep((int)(timePerLine * 1000));
+            }
+
+            // Wait for player input
+            dialogueStartRow++;
+            Terminal.SetCursorPosition(dialogueX, dialogueStartRow);
+            Terminal.Write("Press any key to start...");
+            Console.ReadKey(true);
+        }
+        // helper used before printing to position where boss dialogue should start
+        private void SetCursorPosForBossDialogue()
+        {
+            // keep your existing implementation, e.g.:
+            // Terminal.SetCursorPosition(48, 16);
+            // For this example I'll place the dialogue at col 25, row 12:
+            Terminal.SetCursorPosition(38, 12);
+        }
+
+        // helper: simple word-wrapping
+        private static List<string> WrapText(string text, int maxWidth)
+        {
+            var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = new List<string>();
+            var sb = new StringBuilder();
+
+            foreach (var w in words)
+            {
+                if (sb.Length + w.Length + (sb.Length > 0 ? 1 : 0) > maxWidth)
+                {
+                    lines.Add(sb.ToString());
+                    sb.Clear();
+                }
+
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(w);
+            }
+
+            if (sb.Length > 0) lines.Add(sb.ToString());
+            return lines;
+        }
+
+        private void ShowBossDialogueRightSide(string text,
+                                       int maxWidth = 6, // max chars in the side column
+                                       int charDelayMs = 8,
+                                       ConsoleColor color = ConsoleColor.White,
+                                       int linePauseMs = 250,
+                                       int startRow = 12,
+                                       int startCol = 38,
+                                       int maxCol = 44)
+        {
+            int cursorY = startRow;
+            int cursorX = startCol;
+
+            // Wrap text into lines that fit the right-side width
+            var lines = WrapText(text, maxWidth);
+
+            var originalColor = Terminal.ForegroundColor;
+            Terminal.ForegroundColor = color;
+
+            foreach (var line in lines)
+            {
+                // Check if the line fits in maxCol, otherwise move to next row
+                if (cursorX + line.Length > maxCol)
+                {
+                    cursorX = startCol;  // reset X to start
+                    cursorY++;           // move down a row
+                }
+
+                Terminal.SetCursorPosition(cursorX, cursorY);
+
+                // Typewriter effect
+                foreach (var c in line)
+                {
+                    Terminal.Write(c);
+                    if (charDelayMs > 0) System.Threading.Thread.Sleep(charDelayMs);
+                }
+
+                cursorY++; // move down for the next line
+                if (linePauseMs > 0) System.Threading.Thread.Sleep(linePauseMs);
+            }
+
+            Terminal.ForegroundColor = originalColor;
+        }
+        // now implement the three banter methods using the helper
         private void BanterDialogueOne()
         {
-            //Terminal.ForegroundColor = ConsoleColor.Black;
-            Terminal.SetCursorPosition(48, 20);
-            //Terminal.ResetColor();
-            Terminal.ForegroundColor = ConsoleColor.White;
-            Terminal.WriteLine($"You are going to die muahaha!");
-            //Terminal.ClearLine();
+            ShowBossDialogueRightSide(
+                "I’ve sent your little sword to another dimension — now all you can do is die by my hand!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Red,
+                linePauseMs: 200
+            );
         }
+
         private void BanterDialogueTwo()
         {
-            //Terminal.ForegroundColor = ConsoleColor.Black;
-            Terminal.SetCursorPosition(48, 16);
-            //Terminal.ResetColor();
-            Terminal.ForegroundColor = ConsoleColor.White;
-            Terminal.WriteLine($"You are going to die muahaha akldhfbJSHDBFKHJASDFKHASKFH!");
-            //Terminal.ClearLine();
+            ShowBossDialogueRightSide(
+                "You fool; my magic shall stop your attempts on my life before you can even make them!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Yellow,
+                linePauseMs: 200
+            );
+        }
+
+        private void BanterDialogueThree()
+        {
+            ShowBossDialogueRightSide(
+                "Not so fast, you squalid squash! You forgot that I haven’t used my most powerful magic yet — my tidal mastery is absolute!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Cyan,
+                linePauseMs: 200
+            );
         }
         private void DrawGameOverScreen()
         {
