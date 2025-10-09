@@ -57,19 +57,25 @@ namespace MohawkTerminalGame
 
         static void Main(string[] args)
         {
-            // Set IO aznd clear window.
+
+            // Set IO and clear window.
             Console.InputEncoding = Encoding.Unicode;
             Console.OutputEncoding = Encoding.Unicode;
             Console.Clear();
 
             // Prep
-            // Make sure cursor state is consistent for all OSs.
             Terminal.CursorVisible = true;
-            // Spin up new thread for input
             Input.InitInputThread();
-            // Create and setup game
-            game = new();
+
+            // Create the game instance
+            game = new TerminalGame();
+
+            // Show the intro screen before setup
+            //game.ShowIntroWithDialogue(); // <- NEW If you want to skip intro comment this out
+
+            // Set up the game
             game.Setup();
+
             // Set up Time helper
             if (Time.AutoStart)
                 Time.Start();
@@ -78,13 +84,11 @@ namespace MohawkTerminalGame
             bool doLoop = true;
             while (doLoop && !Input.IsKeyPressed(ConsoleKey.Escape))
             {
-                // Refresh inputs
                 Input.PreparePollNextInput();
                 switch (TerminalExecuteMode)
                 {
                     case TerminalExecuteMode.ExecuteOnce:
                         game.Execute();
-                        // If still in once mode, kill loop
                         if (TerminalExecuteMode == TerminalExecuteMode.ExecuteOnce)
                             doLoop = false;
                         break;
@@ -95,11 +99,9 @@ namespace MohawkTerminalGame
                         TargetFPS = targetFPS; // Force update interval
                         gameLoopTimer.Elapsed += GameLoopTimerEvents;
                         gameLoopTimer.Start();
-                        // Run loop while in this mode
                         while (TerminalExecuteMode == TerminalExecuteMode.ExecuteTime &&
                                !Input.IsKeyPressed(ConsoleKey.Escape))
                         {
-                            // Refresh once enough time has passed, unblocking
                             if (CanGameExecuteTick)
                             {
                                 CanGameExecuteTick = false;
@@ -116,11 +118,10 @@ namespace MohawkTerminalGame
                 }
             }
 
-            // Clear colors before exiting
             Console.ResetColor();
-            // Force exit due to threads in background
             Environment.Exit(0);
         }
+
 
         private static void GameLoopTimerEvents(object? o, ElapsedEventArgs sender)
         {
