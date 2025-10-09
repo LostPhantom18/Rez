@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Runtime.InteropServices;
 using System.Text;
 using DungeonCrawlerSample;
 using DungeonCrawlerSample.MohawkTerminalGame.NewClasses;
@@ -51,7 +52,43 @@ namespace MohawkTerminalGame
         private string lastTimePosText = string.Empty;
         private string lastColRowText = string.Empty;
 
-        string[] rightCharacterArt = new string[]
+        string[] rightCharacterArtIdle = new string[]
+{
+"                   ",
+"      Á            ",
+"    _/-\\_         ",
+"    {òʘó} *        ",
+"   <[ : ]\\|       ",
+"     v v  |        "
+};
+        string[] rightCharacterArtWave = new string[]
+{
+"                    ",
+"             Á      ",
+"     ,__   _/-\\_    ",
+" __’ ) \\   {òʘó} ¡  ",
+"’) \\/   \\ <[ : ]\\|",
+"/  /     \\  v v  | ",
+};
+        string[] rightCharacterArtLightning = new string[]
+{
+" \\ \\               ",
+"  //  Á              ",
+"  V _/-\\_           ",
+"    {òʘó} ¡          ",
+"   <[ : ]\\|         ",
+"     v v  |          "
+};
+        string[] rightCharacterArtSpike = new string[]
+{
+"        \\\\ v//      ",
+"      Á  \\V/       ",
+"    _/-\\_ V        ",
+"    {òʘó} ¡         ",
+"   <[ : ]\\|        ",
+"     v v  |         "
+};
+        string[] rightCharacterArtHurt = new string[]
 {
     "     \\ v//",
     "   Á  \\V/",
@@ -142,6 +179,7 @@ namespace MohawkTerminalGame
         int bossPhase;                      // Weighting for the boss attacks based on the phase
         bool playerHasSword;                // If the player has the sword
 
+
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
         // ─────────────────────────────────────────────────────────────────────
@@ -223,7 +261,7 @@ namespace MohawkTerminalGame
                 int margin = 15;
                 int characterX = mapWidth + margin;
                 int characterY = 5;
-                DrawAsciiCharacter(characterX, characterY, rightCharacterArt, ConsoleColor.Red);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
 
                 if (!isShowingDialogue)
                 {
@@ -240,20 +278,20 @@ namespace MohawkTerminalGame
             elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
-            if (testDying)
-            {
-                damageElapsed += 1f / Program.TargetFPS;
+            //if (testDying)
+            //{
+            //    damageElapsed += 1f / Program.TargetFPS;
 
-                if (damageElapsed >= damageInterval && health > 0)
-                {
-                    ChangeHealth(-1);
-                    damageElapsed = 0f;
-                }
-            }
+            //    if (damageElapsed >= damageInterval && health > 0)
+            //    {
+            //        ChangeHealth(-1);
+            //        damageElapsed = 0f;
+            //    }
+            //}
 
             if (gameOver)
             {
-                //DrawWinScreen(elapsedTime);
+                if (bossAttackInterval < 40) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -261,7 +299,7 @@ namespace MohawkTerminalGame
             if (gameOver == false)
             {
                 UpdateDialogue(); // non-blocking dialogue update
-                
+
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -269,7 +307,6 @@ namespace MohawkTerminalGame
                 {
                     // Make sure to replace what was under the old player like the floor and dots and stuff
                     ResetCell(oldPlayerX, oldPlayerY);
-                    // Then put player in new spot
                     inputChanged = false;
                 }
 
@@ -310,6 +347,14 @@ namespace MohawkTerminalGame
                             spikePositionCounter = 0;
                             // Determine which direction to shoot the spikes
                             isSpikeVertical = Random.CoinFlip();
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtSpike, ConsoleColor.Red);
+
                             if (!isShowingDialogue)
                             {
                                 //StartDialogue("I Cast Spike Attack!", ConsoleColor.Red);
@@ -323,6 +368,14 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Determine how far down to shoot the lightning
                             lightningSize = Random.Integer(7, 13);
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtLightning, ConsoleColor.Red);
+
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
@@ -333,6 +386,14 @@ namespace MohawkTerminalGame
                             RandomizeBossColumn();
                             // Reset the wave row
                             waveRow = MAP_HEIGHT - 1;
+
+                            // Draw static right-side ASCII character using this attack
+                            int mapWidth = MAP_WIDTH * CELL_W;
+                            int margin = 15;
+                            int characterX = mapWidth + margin;
+                            int characterY = 5;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtWave, ConsoleColor.Red);
+
                             //StartDialogue("I Cast a Wave!", ConsoleColor.Red);
                         }
                         isBossAttacking = true;
@@ -383,9 +444,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                             {
                                 // Warn the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 4, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos - 2, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos, bossWarningRow, warning, false);
                                 BossAttackEmoji(bossAttackColPos + 2, bossWarningRow, warning, false);
+                                BossAttackEmoji(bossAttackColPos + 4, bossWarningRow, warning, false);
                                 bossWarningRow++;
                             }
 
@@ -393,9 +456,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackRow < map.Height)
                             {
                                 // Attack the left row, selected row, and right row
+                                BossAttackEmoji(bossAttackColPos - 4, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos - 2, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos, bossAttackRow, spike, true);
                                 BossAttackEmoji(bossAttackColPos + 2, bossAttackRow, spike, true);
+                                BossAttackEmoji(bossAttackColPos + 4, bossAttackRow, spike, true);
                                 bossAttackRow++;
                             }
 
@@ -403,9 +468,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Height)
                             {
                                 // Reset the left row, selected row, and right row
+                                ResetBossAttackTiles(bossAttackColPos - 4, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos - 2, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos, spikePositionCounter);
                                 ResetBossAttackTiles(bossAttackColPos + 2, spikePositionCounter);
+                                ResetBossAttackTiles(bossAttackColPos + 4, spikePositionCounter);
                                 spikePositionCounter++;
 
                                 if (spikePositionCounter >= map.Height)
@@ -426,9 +493,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter > 0 && bossWarningCol < map.Width)
                             {
                                 // Warn the left column, selected column, and right column
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 2, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos - 1, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos, warning, false);
                                 BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 1, warning, false);
+                                BossAttackEmoji(bossWarningCol * 2, bossAttackRowPos + 2, warning, false);
                                 bossWarningCol++;
                             }
 
@@ -436,9 +505,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 60 && bossAttackCol < map.Width)
                             {
                                 // Attack the left column, selected column, and right column
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 2, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos - 1, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos, spike, true);
                                 BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 1, spike, true);
+                                BossAttackEmoji(bossAttackCol * 2, bossAttackRowPos + 2, spike, true);
                                 bossAttackCol++;
                             }
 
@@ -446,9 +517,11 @@ namespace MohawkTerminalGame
                             if (bossSpikeTimer % 3 == 0 && bossAttackCounter >= 120 && spikePositionCounter < map.Width * 2)
                             {
                                 // Reset the left column, selected column, and right columny
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 2);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos - 1);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos);
                                 ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 1);
+                                ResetBossAttackTiles(spikePositionCounter * 2, bossAttackRowPos + 2);
                                 spikePositionCounter++;
 
                                 if (spikePositionCounter >= map.Width * 2)
@@ -535,6 +608,7 @@ namespace MohawkTerminalGame
                          * 4. Recede the waves
                          * 5. Finish attack
                          */
+
                         // Boss warning
                         if (bossWaveTimer % 4 == 0 && bossAttackCounter > 0 && bossWarningRow < map.Height)
                         {
@@ -624,10 +698,20 @@ namespace MohawkTerminalGame
                     bossPhase += 5;
                     bossAttackInterval -= 60;
 
+                    // Check if the boss is defeated
+                    if (bossAttackInterval < 40) gameOver = true;
+
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
-                    // OnSwordDeflected();
+                    OnSwordDeflected();
                 }
 
+
+                if (Input.IsKeyPressed(ConsoleKey.J))
+                {
+                    //gameOver = true;
+                    bossPhase += 5;
+                    bossAttackInterval -= 60;
+                }
                 /*
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
@@ -647,7 +731,7 @@ namespace MohawkTerminalGame
                     UpdateHearts();
                     lastDrawnHealth = health;
                 }
-                
+
                 //BanterDialogueOne();
                 Terminal.ForegroundColor = ConsoleColor.Black;
                 // Clear stray input characters
@@ -678,14 +762,14 @@ namespace MohawkTerminalGame
             "                                        {XXX}",
             "                                        {XXX}",
             "                                        {XXX}",
-            "                                    ___<MMMMMMM>___",
-            "                                  /______((I))______\\",
-            "        ___        ___  ___  _______  |________| _________   ________    ___   ___",
-            "       \\--\\      /—-/ |--| | _____| |___  ___|  |  ___  |   |-------|   \\--\\  /—-/",
-            "        \\--\\    /—-/  |--| |--|       |--|  |   |--| |--|   |-------|    \\--\\/—-/",
-            "         \\--\\  /—-/   |--| |--|       |--|  |   |--| |--|   |--|\\--\\      \\----/",
-            "          \\--\\/—-/    |--| |--|____   |--|  |   |--| |--|   |--| \\--\\      |--|",
-            "           \\____ /     |__| |______|   |__|  |   |_______|   |__|  \\__\\     |__|",
+            "                                   ___<MMMMMMM>___",
+            "                                 /______((I))______\\",
+            "        ___        ___  __   ______   _______     _______     _______    ___    ___",
+            "        \\--\\      /—-/ |--| |______| |___ ___|   |  ___  |   |-------|   \\--\\  /—-/",
+            "         \\--\\    /—-/  |--| |--|       |--|  |   |--| |--|   |-------|    \\--\\/—-/",
+            "          \\--\\  /—-/   |--| |--|       |--|  |   |--| |--|   |--|\\--\\      \\----/",
+            "           \\--\\/—-/    |--| |--|____   |--|  |   |--| |--|   |--| \\--\\      |--|",
+            "            \\____/     |__| |______|   |__|  |   |_______|   |__|  \\__\\     |__|",
             "                                        | |  |",
             "                                        | |  |",
             "                                        | |  |",
@@ -697,8 +781,8 @@ namespace MohawkTerminalGame
             "                                        | |  |",
             "                                        | |  |",
             "                                        | |  |",
-            "                                         \\\\  /",
-            "                                          \\/"
+            "                                        \\ \\ /",
+            "                                         \\/"
         };
 
                 // Instructions
@@ -911,7 +995,7 @@ namespace MohawkTerminalGame
             }
         }
 
-        
+
         private static List<string> WrapText(string text, int maxWidth)
         {
             var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1023,29 +1107,29 @@ namespace MohawkTerminalGame
         };
 
                 string[] skull = {
-            "____________ ____________  _____     _____        __________",
-            "/           //   ___     //     |   /     |\\     /         /\\",
-            "/   ________//   /  /    //  /|  |  /  /|  | \\    /   ______/  \\",
-            "/   /\\      //   /__/    //  / |  | /  / |  |  \\  /   /_\\___ \\   \\",
-            "/   /  \\___ //   ____    //  /  |  |/  /  |  |   \\/         /\\ \\   \\",
-            "/   /  /_   //   /   /   //  /   |_____/   |  |   /    _____/  \\ \\   \\",
-            "/   /____/  //   /   /   //  /     \\    \\   |  |  /    /_\\__ \\   \\ \\   \\",
-            "/           //   /   /   //  /       \\    \\  |  | /         /\\ \\   \\ \\   \\",
-            "/___________//___/___/___//__/      ___\\ ___\\_|__|/___________/\\ \\   \\ \\ \\  /",
+            "        ____________ ____________ _____     _____         __________",
+            "       /           //   ___     //     |   /     |\\      /         /\\",
+            "      /   ________//   /  /    //  /|  |  /  /|  | \\    /   ______/  \\",
+            "     /   /\\      //   /__/    //  / |  | /  / |  |  \\  /   /_\\___ \\   \\",
+            "    /   /  \\___ //   ____    //  /  |  |/  /  |  |   \\/         /\\ \\   \\",
+            "   /   /  /_   //   /   /   //  /   |_____/   |  |   /    _____/  \\ \\   \\",
+            "  /   /____/  //   /   /   //  /     \\    \\   |  |  /    /_\\__ \\   \\ \\   \\",
+            " /           //   /   /   //  /       \\    \\  |  | /           /\\   \\ \\   \\",
+            "/___________//___/___/___//__/      ___\\ ___\\_|__|/___________/\\ \\   \\ \\  /",
             "\\           /           /|    |\\   /   //         //  _____  \\  \\ \\   \\ \\/",
             " \\         /   ____    / |    | \\ /   //   ______//  /    /  /\\  \\ \\   \\",
             "  \\       /   /\\  /   /  |    |  /   //   /_____ /  /____/  /  \\  \\ \\  /",
             "   \\     /   /  \\/   /   |    | /   //         //   __     /    \\  \\ \\/",
             "    \\   /   /   /   /    |    |/   //   ______//   /  |   |\\     \\  \\",
             "     \\ /   /___/   /     |        //   /_____ /   /   |   | \\     \\ /",
-            "      /          /       |       //         //  /    |   |  \\     \\",
-            "     /___________/        |______//_________//___/     |___|   \\     \\",
+            "      /           /      |       //         //   /    |   |  \\     \\",
+            "     /___________/       |______//_________//___/     |___|   \\     \\",
             "     \\           \\        \\     \\ \\        \\ \\  \\      \\   \\   \\    /",
             "      \\           \\        \\     \\ \\        \\ \\  \\      \\   \\   \\  /",
             "       \\           \\      / \\     \\ \\        \\ \\  \\      \\   \\   \\/",
             "        \\           \\    /   \\     \\ \\        \\ \\  \\    / \\   \\  |",
             "         \\           \\  /     \\     \\ \\        \\ \\  \\  /   \\   \\ |",
-            "          \\___________\\/        \\_____\\/\\________\\/\\__\\/      \\___\\|"
+            "          \\___________\\/       \\_____\\/\\________\\/\\__\\/     \\___\\|"
         };
 
                 int winW = Console.WindowWidth;
@@ -1200,7 +1284,7 @@ namespace MohawkTerminalGame
         void BossAttackEmoji(int x, int y, ColoredText emoji, bool isAttack)
         {
             // Check if the position is in bounds, quit if not
-            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
+            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y >= map.Height) return;
 
             map.Poke(x, y, emoji);
             if (isAttack) attackArray[x, y] = true;
@@ -1213,6 +1297,13 @@ namespace MohawkTerminalGame
             if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
             map.Poke(x, y, map.Get(x / 2, y));
             attackArray[x, y] = false;
+
+            // Draw static right-side ASCII character using this attack
+            int mapWidth = MAP_WIDTH * CELL_W;
+            int margin = 15;
+            int characterX = mapWidth + margin;
+            int characterY = 5;
+            DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
         }
 
         // Randomize boss attack column (X value)
@@ -1269,8 +1360,8 @@ namespace MohawkTerminalGame
             if (Input.IsKeyPressed(ConsoleKey.DownArrow) || Input.IsKeyPressed(ConsoleKey.S)) playerY++;
             if (Input.IsKeyPressed(ConsoleKey.UpArrow) || Input.IsKeyPressed(ConsoleKey.W)) playerY--;
 
-            playerX = Math.Clamp(playerX, 0, MAP_WIDTH - 1);
-            playerY = Math.Clamp(playerY, 0, MAP_HEIGHT - 1);
+            playerX = Math.Clamp(playerX, 1, MAP_WIDTH - 2);
+            playerY = Math.Clamp(playerY, 1, MAP_HEIGHT - 2);
 
             if (oldPlayerX != playerX || oldPlayerY != playerY)
                 inputChanged = true;
@@ -1317,7 +1408,7 @@ namespace MohawkTerminalGame
         int swordIndex = 0; // To know what part of the sword you are on
 
         bool swordAnnouncmentShown = false;
-        string swordAnnouncmentText = "SWORD COLLECTED - DESTROY AND DEFLECT THE WIZARD!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
+        string swordAnnouncmentText = "SWORD COLLECTED - DEFLECT THE WIZARD'S ATTACK!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
 
         void SwordPartsTick()
         {
@@ -1325,7 +1416,7 @@ namespace MohawkTerminalGame
             if (playerHasSword)
             {
                 // Keep the banner visible but do not spawn anything
-                return; 
+                return;
             }
             // If a part is on the map then make it and allow it to be picked up
             if (swordX != -1)
@@ -1432,6 +1523,7 @@ namespace MohawkTerminalGame
 
             // Reset inventory to empty for the next phaze
             collectedCounter = 0;
+            swordIndex = 0;
             DrawInventory();
 
             // Resume item spawn timer
