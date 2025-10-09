@@ -116,7 +116,7 @@ namespace MohawkTerminalGame
         // ─────────────────────────────────────────────────────────────────────
         // BOSS AI STORAGE
         // ─────────────────────────────────────────────────────────────────────
-
+        
         int bossSpikeTimer;             // Timer for spike attack
         int bossLightningTimer;         // Timer for lightning attack
         int bossWaveTimer;              // Timer for wave attack
@@ -142,6 +142,7 @@ namespace MohawkTerminalGame
         bool[,] attackArray;                // Memory for where the boss is currently attacking
         int bossPhase;                      // Weighting for the boss attacks based on the phase
         bool playerHasSword;                // If the player has the sword
+        
 
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
@@ -241,16 +242,16 @@ namespace MohawkTerminalGame
             elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
-            if (testDying)
-            {
-                damageElapsed += 1f / Program.TargetFPS;
+            //if (testDying)
+            //{
+            //    damageElapsed += 1f / Program.TargetFPS;
 
-                if (damageElapsed >= damageInterval && health > 0)
-                {
-                    ChangeHealth(-1);
-                    damageElapsed = 0f;
-                }
-            }
+            //    if (damageElapsed >= damageInterval && health > 0)
+            //    {
+            //        ChangeHealth(-1);
+            //        damageElapsed = 0f;
+            //    }
+            //}
 
             if (gameOver)
             {
@@ -262,7 +263,7 @@ namespace MohawkTerminalGame
             if (gameOver == false)
             {
                 UpdateDialogue(); // non-blocking dialogue update
-                
+
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -644,11 +645,11 @@ namespace MohawkTerminalGame
                 }
 
 
-                if (Input.IsKeyPressed(ConsoleKey.J))
-                {
-                    gameOver = true;
-                    bossAttackInterval = 30;
-                }
+                //if (Input.IsKeyPressed(ConsoleKey.J))
+                //{
+                //    gameOver = true;
+                //    bossAttackInterval -= 60;
+                //}
                 /*
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
@@ -668,7 +669,7 @@ namespace MohawkTerminalGame
                     UpdateHearts();
                     lastDrawnHealth = health;
                 }
-                
+
                 //BanterDialogueOne();
                 Terminal.ForegroundColor = ConsoleColor.Black;
                 // Clear stray input characters
@@ -932,7 +933,7 @@ namespace MohawkTerminalGame
             }
         }
 
-        
+
         private static List<string> WrapText(string text, int maxWidth)
         {
             var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1346,7 +1347,7 @@ namespace MohawkTerminalGame
             if (playerHasSword)
             {
                 // Keep the banner visible but do not spawn anything
-                return; 
+                return;
             }
             // If a part is on the map then make it and allow it to be picked up
             if (swordX != -1)
