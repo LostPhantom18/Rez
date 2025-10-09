@@ -727,12 +727,13 @@ namespace MohawkTerminalGame
                     }
                 }
 
-                if (Input.IsKeyPressed(ConsoleKey.J))
-                {
-                    //gameOver = true;
-                    bossPhase += 10;
-                    bossAttackInterval -= 60;
-                }
+                // Dev key to go to next boss phase
+                //if (Input.IsKeyPressed(ConsoleKey.J))
+                //{
+                //    //gameOver = true;
+                //    bossPhase += 10;
+                //    bossAttackInterval -= 60;
+                //}
                 /*
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
