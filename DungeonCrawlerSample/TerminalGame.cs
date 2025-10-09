@@ -253,7 +253,7 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                //DrawWinScreen(elapsedTime);
+                if (bossAttackInterval < 40) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -635,7 +635,8 @@ namespace MohawkTerminalGame
                     bossPhase += 5;
                     bossAttackInterval -= 60;
 
-                    if (bossAttackInterval <= 40)
+                    // Check if the boss is defeated
+                    if (bossAttackInterval < 40) gameOver = true;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
@@ -694,11 +695,11 @@ namespace MohawkTerminalGame
             "                                    ___<MMMMMMM>___",
             "                                  /______((I))______\\",
             "        ___        ___  ___  _______  |________| _________   ________    ___   ___",
-            "       \\--\\      /—-/ |--| | _____| |___  ___|  |  ___  |   |-------|   \\--\\  /—-/",
-            "        \\--\\    /—-/  |--| |--|       |--|  |   |--| |--|   |-------|    \\--\\/—-/",
-            "         \\--\\  /—-/   |--| |--|       |--|  |   |--| |--|   |--|\\--\\      \\----/",
-            "          \\--\\/—-/    |--| |--|____   |--|  |   |--| |--|   |--| \\--\\      |--|",
-            "           \\____ /     |__| |______|   |__|  |   |_______|   |__|  \\__\\     |__|",
+            "        \\--\\      /—-/ |--| | _____| |___  ___|  |  ___  |   |-------|   \\--\\  /—-/",
+            "         \\--\\    /—-/  |--| |--|       |--|  |   |--| |--|   |-------|    \\--\\/—-/",
+            "          \\--\\  /—-/   |--| |--|       |--|  |   |--| |--|   |--|\\--\\      \\----/",
+            "           \\--\\/—-/    |--| |--|____   |--|  |   |--| |--|   |--| \\--\\      |--|",
+            "            \\____/     |__| |______|   |__|  |   |_______|   |__|  \\__\\     |__|",
             "                                        | |  |",
             "                                        | |  |",
             "                                        | |  |",
@@ -1330,7 +1331,7 @@ namespace MohawkTerminalGame
         int swordIndex = 0; // To know what part of the sword you are on
 
         bool swordAnnouncmentShown = false;
-        string swordAnnouncmentText = "SWORD COLLECTED - DESTROY AND DEFLECT THE WIZARD!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
+        string swordAnnouncmentText = "SWORD COLLECTED - DEFLECT THE WIZARD'S ATTACK!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
 
         void SwordPartsTick()
         {
