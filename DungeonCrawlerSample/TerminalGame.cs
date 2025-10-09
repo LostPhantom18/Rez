@@ -64,7 +64,7 @@ namespace MohawkTerminalGame
         string[] rightCharacterArtWave = new string[]
 {
 "                    ",
-"                 Á  ",
+"             Á      ",
 "     ,__   _/-\\_    ",
 " __’ ) \\   {òʘó} ¡  ",
 "’) \\/   \\ <[ : ]\\|",
