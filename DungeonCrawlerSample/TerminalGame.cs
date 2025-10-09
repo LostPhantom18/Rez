@@ -253,8 +253,8 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                DrawWinScreen(elapsedTime);
-                //DrawGameOverScreen();
+                //DrawWinScreen(elapsedTime);
+                DrawGameOverScreen();
                 return; // Stop all other updates
             }
             CheckIfDead();
@@ -269,7 +269,6 @@ namespace MohawkTerminalGame
                 {
                     // Make sure to replace what was under the old player like the floor and dots and stuff
                     ResetCell(oldPlayerX, oldPlayerY);
-                    // Then put player in new spot
                     inputChanged = false;
                 }
 
@@ -635,6 +634,8 @@ namespace MohawkTerminalGame
                     playerHasSword = false;
                     bossPhase += 5;
                     bossAttackInterval -= 60;
+
+                    if (bossAttackInterval <= 40)
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
@@ -1212,7 +1213,7 @@ namespace MohawkTerminalGame
         void BossAttackEmoji(int x, int y, ColoredText emoji, bool isAttack)
         {
             // Check if the position is in bounds, quit if not
-            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y > map.Height) return;
+            if (x < 0 || x > (map.Width - 1) * 2 || y < 0 || y >= map.Height) return;
 
             map.Poke(x, y, emoji);
             if (isAttack) attackArray[x, y] = true;
