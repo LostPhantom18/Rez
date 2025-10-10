@@ -26,6 +26,11 @@ namespace MohawkTerminalGame
         const int MAP_WIDTH = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
         const int MAP_HEIGHT = OUTER_GRID * INNER_GRID + 1; // = 15 in the game
 
+        // Invincibility after taking damage
+        private bool isInvincible = false;
+        private float invincibleTimer = 0f;
+        private const float INVICIBLE_DURATION = 2f;
+
         // Jonahs Stuff
         bool hasShownBanterOne = false;
         bool hasShownBanterTwo = false;
@@ -44,7 +49,7 @@ namespace MohawkTerminalGame
         bool gameOverPrinted = false;
         private List<string> dialogueLines; // store wrapped lines
         private int currentLineIndex = 0;   // which line we are typing
-        // Jonahs Stuff
+      
 
         // HUD tracking to prevent flicker
         private int hudRowTimePos = MAP_HEIGHT + 1; // row for Time / Pos (fixed)
@@ -131,7 +136,7 @@ namespace MohawkTerminalGame
         ColoredText floorDark = new(@"  ", ConsoleColor.DarkGray, ConsoleColor.Black);
 
         // --- Player ---
-        ColoredText player = new(@"💀", ConsoleColor.White, ConsoleColor.Black);
+        ColoredText player = new(@"🤴", ConsoleColor.White, ConsoleColor.Black);
         ColoredText gem = new(@"💎", ConsoleColor.White, ConsoleColor.Black);
         ColoredText shield = new(@"🛡️", ConsoleColor.White, ConsoleColor.Black);
         ColoredText sword = new(@"⚔️", ConsoleColor.White, ConsoleColor.Black);
@@ -143,7 +148,7 @@ namespace MohawkTerminalGame
         ColoredText wave = new(@"🌊", ConsoleColor.Blue, ConsoleColor.Black);
 
         // --- Player Health ---
-        ColoredText playerHeart = new(@"💀", ConsoleColor.Red, ConsoleColor.Black);
+        ColoredText playerHeart = new(@"🤴", ConsoleColor.Red, ConsoleColor.Black);
 
         // Input recording so we only need to redraw when neccessary
         bool inputChanged;
@@ -203,6 +208,11 @@ namespace MohawkTerminalGame
             Terminal.CursorVisible = false;
             Terminal.BackgroundColor = ConsoleColor.Black;
             //UpdateEnemyHearts();
+
+            // Set up invicibility to false at start
+            isInvincible = false;
+            invincibleTimer = 0;
+
             if (!gameOver)
             {
 
@@ -293,6 +303,17 @@ namespace MohawkTerminalGame
         {
             
             elapsedTime += 1f / Program.TargetFPS;
+
+            //  Tick invicibilty frames
+            if (isInvincible)
+            {
+                invincibleTimer -= 1f / Program.TargetFPS;
+                if (invincibleTimer <= 0f)
+                {
+                    isInvincible = false;
+                    invincibleTimer = 0f;
+                }
+            }
             //BanterDialogueTwo();
 
             //if (testDying)
@@ -731,9 +752,14 @@ namespace MohawkTerminalGame
                 DrawCharacter(playerX, playerY, player);
 
                 // Player takes damage if they are in a cell with an attack (buffer needed?)
-                if (PlayerInDanger() && !deflectActive)
+                if (PlayerInDanger() && !deflectActive && !isInvincible)
                 {
                     ChangeHealth(-1);
+
+                    // Start invicibility frames
+                    isInvincible = true;
+                    invincibleTimer = INVICIBLE_DURATION;
+
                     // Get rid of tiles all around player so they don't immediately take more damage
                     //for (int i = -1; i < 2; i++)
                     //{
@@ -1501,7 +1527,7 @@ namespace MohawkTerminalGame
         int swordIndex = 0; // To know what part of the sword you are on
 
         bool swordAnnouncmentShown = false;
-        string swordAnnouncmentText = "SWORD COLLECTED - DEFLECT THE WIZARD'S ATTACK! (Stand in the line of fire to parry)"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
+        string swordAnnouncmentText = "SWORD REFORGED! Stand beside Akunin's attack and press [SPACE] to deflect it!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
 
         void SwordPartsTick()
         {
