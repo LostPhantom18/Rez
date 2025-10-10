@@ -44,6 +44,7 @@ namespace MohawkTerminalGame
         bool gameOverPrinted = false;
         private List<string> dialogueLines; // store wrapped lines
         private int currentLineIndex = 0;   // which line we are typing
+        int waveSpeed = 1;
         // Jonahs Stuff
 
         // HUD tracking to prevent flicker
@@ -191,6 +192,7 @@ namespace MohawkTerminalGame
         /// Run once before Execute begins
         public void Setup()
         {
+            waveSpeed = 1;
             //BanterDialogueOne();
             damageTimerStart = DateTime.Now;
             // Run the game steady by using the timer loop (made by raph)
@@ -308,7 +310,8 @@ namespace MohawkTerminalGame
 
             if (gameOver)
             {
-                if (bossPhase > 20) DrawWinScreen(elapsedTime);
+                //if (bossPhase > 20) DrawWinScreen(elapsedTime);
+                if (enemyHealth <= 0) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -717,8 +720,8 @@ namespace MohawkTerminalGame
                         }
 
                         // Increase time counter while the boss is using an attack
-                        bossWaveTimer++;
-                        bossAttackCounter++;
+                        bossWaveTimer = bossWaveTimer+ 1;
+                        bossAttackCounter= bossAttackCounter+1;
 
                     } // End of Wave attack
 
@@ -754,7 +757,7 @@ namespace MohawkTerminalGame
 
                     // Check if the boss is defeated
                     if (bossPhase > 30) gameOver = true;
-
+                    if (enemyHealth <= 0) gameOver = true;
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
                 }
@@ -765,10 +768,11 @@ namespace MohawkTerminalGame
                     bossFinalPhaseCounter++;
                     // Every 5 seconds, decrease time between attacks by 10 frames
                     // 4 cycles to get to max attack rate
-                    if (bossFinalPhaseCounter >= 300 && bossAttackInterval > 0)
+                    if (bossFinalPhaseCounter >= 100 && bossAttackInterval > 0)
                     {
+                        waveSpeed = waveSpeed+1;
                         bossFinalPhaseCounter = 0;
-                        bossAttackIntervalCounter -= 10;
+                        bossAttackIntervalCounter -= 40;
                     }
                 }
 
@@ -1092,77 +1096,6 @@ namespace MohawkTerminalGame
 
             return lines;
         }
-
-        /*
-        private void ShowBossDialogueRightSide(string text,
-                                       int maxWidth = 60, // characters per line
-                                       int charDelayMs = 8,
-                                       ConsoleColor color = ConsoleColor.White,
-                                       int linePauseMs = 250,
-                                       int startRow = 12,
-                                       int startCol = 38)
-        {
-            int cursorY = startRow;
-            int cursorX = startCol;
-
-            var lines = WrapText(text, maxWidth); // wrap text properly by words
-
-            var originalColor = Terminal.ForegroundColor;
-            Terminal.ForegroundColor = color;
-
-            foreach (var line in lines)
-            {
-                cursorX = startCol; // reset X at start of each line
-                Terminal.SetCursorPosition(cursorX, cursorY);
-
-                foreach (var c in line)
-                {
-                    Terminal.Write(c);
-                    if (charDelayMs > 0) System.Threading.Thread.Sleep(charDelayMs);
-                    cursorX++;
-                }
-
-                cursorY++; // move to next line
-                if (linePauseMs > 0) System.Threading.Thread.Sleep(linePauseMs);
-            }
-
-            Terminal.ForegroundColor = originalColor;
-        }
-        
-        // now implement the three banter methods using the helper
-        private void BanterDialogueOne()
-        {
-            ShowBossDialogueRightSide(
-                "I’ve sent your little sword to another dimension — now all you can do is die by my hand!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Red,
-                linePauseMs: 200
-            );
-        }
-
-        private void BanterDialogueTwo()
-        {
-            ShowBossDialogueRightSide(
-                "You fool; my magic shall stop your attempts on my life before you can even make them!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Yellow,
-                linePauseMs: 200
-            );
-        }
-
-        private void BanterDialogueThree()
-        {
-            ShowBossDialogueRightSide(
-                "Not so fast, you squalid squash! You forgot that I haven’t used my most powerful magic yet — my tidal mastery is absolute!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Cyan,
-                linePauseMs: 200
-            );
-        }
-        */
         private void DrawGameOverScreen()
         {
             if (!gameOverScreenDrawn)
@@ -1270,6 +1203,8 @@ namespace MohawkTerminalGame
             health = maxHealth;
             lastDrawnHealth = -1;
             damageElapsed = 0f;
+            enemyHealth = 3;
+            enemyMaxHealth = 3;
             gameOver = false;
 
             // Reset player position
@@ -1415,6 +1350,7 @@ namespace MohawkTerminalGame
         // Resets the boss attacking state so it can attack again
         void ResetBossAttackingState()
         {
+            waveSpeed = 1;
             isBossAttacking = false;
             currentAttack = "";
             bossAttackCounter = 0;
