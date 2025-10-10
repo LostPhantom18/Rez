@@ -106,6 +106,8 @@ namespace MohawkTerminalGame
         private int dialogueMaxWidth = 32;
         private bool winScreenDrawn = false;
         private float elapsedTime = 0f; // total time in seconds
+        private bool completedPhaseOne = false;
+        private bool completedPhaseTwo = false;
         // Joanhs Stuff
 
         // Dot colors (console only supports 16 colors theres no way for hexidecimals; grayscale is fastest and looks the best imo)
@@ -180,7 +182,8 @@ namespace MohawkTerminalGame
         int bossFinalPhaseCounter;          // Counter during the final boss phase to make attacks more frequent
         bool playerHasSword;                // If the player has the sword
 
-
+        public int enemyHealth = 2;
+        public int enemyMaxHealth = 2;
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
         // ─────────────────────────────────────────────────────────────────────
@@ -199,13 +202,15 @@ namespace MohawkTerminalGame
             Terminal.SetTitle("Wizard Tower");
             Terminal.CursorVisible = false;
             Terminal.BackgroundColor = ConsoleColor.Black;
-
+            //UpdateEnemyHearts();
             if (!gameOver)
             {
 
                 deflectDurationFrames = (int)(0.5f * Program.TargetFPS);
                 deflectActive = false;
                 deflectTimer = 0;
+
+                UpdateEnemyHearts();
 
                 // Build a new 15×15 grid (each cell makes two columns)
                 map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorLight);
@@ -270,21 +275,23 @@ namespace MohawkTerminalGame
                 int mapWidth = MAP_WIDTH * CELL_W;
                 int margin = 15;
                 int characterX = mapWidth + margin;
-                int characterY = 5;
+                int characterY = 2;
                 DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
 
                 if (!isShowingDialogue)
                 {
-                    StartDialogue("I’ve sent your little sword to another dimension — now all you can do is die by my hand!", ConsoleColor.Red);
+                    if (!completedPhaseOne)
+                    {
+                        StartDialogue("I’ve sent your little sword to another dimension — now all you can do is die by my hand!", ConsoleColor.Red);
+                    }
                 }
-
             }
 
         }
 
         public void Execute()
         {
-
+            
             elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
@@ -308,6 +315,7 @@ namespace MohawkTerminalGame
             CheckIfDead();
             if (gameOver == false)
             {
+                
                 UpdateDialogue(); // non-blocking dialogue update
 
                 // Does input and move player one cell at a time using WASD or the arrows
@@ -325,11 +333,11 @@ namespace MohawkTerminalGame
 
                 SwordPartsTick();
 
-                // Basic HUD will be changed for sure
-                // Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
-                // Terminal.ResetColor();
-                // Terminal.ForegroundColor = ConsoleColor.Black;
-                // Terminal.Write(Time.DisplayText);
+                 //Basic HUD will be changed for sure
+                 //Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
+                 //Terminal.ResetColor();
+                 //Terminal.ForegroundColor = ConsoleColor.Black;
+                 //Terminal.Write(Time.DisplayText);
 
                 // ─────────────────────────────────────────────────────────────────────
                 // BOSS ATTACK CODE LOOPS
@@ -353,6 +361,7 @@ namespace MohawkTerminalGame
                         // Spike attack settings
                         if (attackToUse < 13)
                         {
+                            
                             currentAttack = "spike";
                             // Randomize where the boss will attack
                             RandomizeBossColumn();
@@ -365,7 +374,7 @@ namespace MohawkTerminalGame
                             int mapWidth = MAP_WIDTH * CELL_W;
                             int margin = 15;
                             int characterX = mapWidth + margin;
-                            int characterY = 5;
+                            int characterY = 2;
                             DrawAsciiCharacter(characterX, characterY, rightCharacterArtSpike, ConsoleColor.Red);
 
                             if (!isShowingDialogue)
@@ -376,6 +385,16 @@ namespace MohawkTerminalGame
                         // Lightning attack settings
                         else if (attackToUse < 22)
                         {
+                            if (completedPhaseOne == false)
+                            {
+                                completedPhaseOne = true;
+                                
+                                
+                            }
+                            if (completedPhaseOne == true && completedPhaseTwo == false)
+                            {
+                                StartDialogue("And you forget that my spatial manipulation extends beyond creating dimensions now observe, my power!\r\n", ConsoleColor.Red);
+                            }
                             currentAttack = "lightning";
                             // Randomize where the boss will attack
                             RandomizeBossColumn();
@@ -386,7 +405,7 @@ namespace MohawkTerminalGame
                             int mapWidth = MAP_WIDTH * CELL_W;
                             int margin = 15;
                             int characterX = mapWidth + margin;
-                            int characterY = 5;
+                            int characterY = 2;
                             DrawAsciiCharacter(characterX, characterY, rightCharacterArtLightning, ConsoleColor.Red);
 
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
@@ -394,6 +413,14 @@ namespace MohawkTerminalGame
                         // Wave attack settings
                         else if (attackToUse < 30)
                         {
+                            if (completedPhaseTwo == false)
+                            {
+                                completedPhaseTwo = true;
+                            }
+                            if (completedPhaseOne == true && completedPhaseTwo == true)
+                            {
+                                StartDialogue("Not so fast you squalid squash you forgot that I haven’t used my most powerful magic yet, my tidal mastery is absolute!\r\n", ConsoleColor.Red);
+                            }
                             currentAttack = "wave";
                             // Randomize where the boss will attack
                             RandomizeBossColumn();
@@ -404,7 +431,7 @@ namespace MohawkTerminalGame
                             int mapWidth = MAP_WIDTH * CELL_W;
                             int margin = 15;
                             int characterX = mapWidth + margin;
-                            int characterY = 5;
+                            int characterY = 2;
                             DrawAsciiCharacter(characterX, characterY, rightCharacterArtWave, ConsoleColor.Red);
 
                             //StartDialogue("I Cast a Wave!", ConsoleColor.Red);
@@ -553,7 +580,7 @@ namespace MohawkTerminalGame
                     // Start of Lightning attack
                     if (currentAttack == "lightning")
                     {
-                        StartDialogue("And you forget that my spatial manipulation extends beyond creating dimensions now observe, my power!\r\n", ConsoleColor.Red);
+                        
                         /**
                          * Attack Steps:
                          * 1. Choose which columns to affect (choose 1, then every other for x amount of columns)
@@ -612,7 +639,7 @@ namespace MohawkTerminalGame
                     // Start of Wave attack
                     if (currentAttack == "wave")
                     {
-                        StartDialogue("Not so fast you squalid squash you forgot that I haven’t used my most powerful magic yet, my tidal mastery is absolute!\r\n", ConsoleColor.Red);
+                        
                         /**
                          * Attack Steps:
                          * 1. Choose vertical area to be safe
@@ -720,7 +747,7 @@ namespace MohawkTerminalGame
                     bossAttackInterval -= 60;
 
                     // Check if the boss is defeated
-                    if (bossPhase > 20) gameOver = true;
+                    if (bossPhase > 30) gameOver = true;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
@@ -746,11 +773,12 @@ namespace MohawkTerminalGame
                 //    bossPhase += 10;
                 //    bossAttackInterval -= 60;
                 //}
-                /*
+                
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
                 Terminal.ForegroundColor = ConsoleColor.White;
                 Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
+                /*
                 Terminal.ClearLine();
                 Terminal.Write($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
                 Terminal.ForegroundColor = ConsoleColor.Black;
@@ -1286,7 +1314,7 @@ namespace MohawkTerminalGame
             string timeText = Time.DisplayText;
             string posText = $"Pos({playerX + 1},{playerY + 1})";
             string timePosFull = $"Time: {timeText}   {posText}";
-
+            UpdateEnemyHearts();
             //string colRowText = $"Is player hit:";
 
             // Only update if changed (or forced)
@@ -1339,7 +1367,7 @@ namespace MohawkTerminalGame
             int mapWidth = MAP_WIDTH * CELL_W;
             int margin = 15;
             int characterX = mapWidth + margin;
-            int characterY = 5;
+            int characterY = 2;
             DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
         }
 
@@ -1466,7 +1494,7 @@ namespace MohawkTerminalGame
         int swordIndex = 0; // To know what part of the sword you are on
 
         bool swordAnnouncmentShown = false;
-        string swordAnnouncmentText = "SWORD COLLECTED - DEFLECT THE WIZARD'S ATTACK!"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
+        string swordAnnouncmentText = "SWORD COLLECTED - DEFLECT THE WIZARD'S ATTACK! (Stand in the line of fire to parry)"; // Can be changed by our narrative writers (ik its corny sorry - ciaran)
 
         void SwordPartsTick()
         {
@@ -1575,11 +1603,12 @@ namespace MohawkTerminalGame
         // Call this when the sword gets used/deflected to resume the randomized spawns of the sword parts
         void OnSwordDeflected()
         {
+            enemyHealth= enemyHealth-1;
             // Clear the accouncement line
             Terminal.SetCursorPosition(0, hudRowAnnouncment);
             Console.Write(new string(' ', 120));
             swordAnnouncmentShown = false;
-
+            //enemyHealth=enemyHealth-1;
             // Reset inventory to empty for the next phaze
             collectedCounter = 0;
             swordIndex = 0;
@@ -1751,6 +1780,31 @@ namespace MohawkTerminalGame
                 gameOver = true;
             }
         }
+        void UpdateEnemyHearts()
+        {
+            // Save old color
+            var oldColor = Console.ForegroundColor;
+
+            // Choose a good display line below the map
+            int uiY = MAP_HEIGHT - 8; // +2 lines below the map
+            int uiX = 46;              // left side
+
+            // Move cursor & clear the UI area
+            Console.SetCursorPosition(uiX, uiY);
+            //Console.Write(new string(' ', 80));
+            Console.SetCursorPosition(uiX, uiY);
+
+            // Build hearts string
+            string enemyHearts = new string('♥', Math.Max(0, enemyHealth));
+            string enemyEmpty = new string('♡', Math.Max(0, enemyMaxHealth - enemyHealth));
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write($"Enemy Health: {enemyHearts}{enemyEmpty}");
+            //Console.Write("Enemy Health: " + enemyHealth);
+            // Restore color
+            Console.ForegroundColor = oldColor;
+        }
+
         private void UpdateHearts() // Updates UI
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -1765,6 +1819,8 @@ namespace MohawkTerminalGame
             string empty = new string('♡', Math.Max(0, maxHealth - health));
 
             Console.Write($"Health: {hearts}{empty}");
+
+            
 
             Console.ResetColor();
         }
