@@ -202,6 +202,11 @@ namespace MohawkTerminalGame
 
             if (!gameOver)
             {
+
+                deflectDurationFrames = (int)(0.5f * Program.TargetFPS);
+                deflectActive = false;
+                deflectTimer = 0;
+
                 // Build a new 15×15 grid (each cell makes two columns)
                 map = new TerminalGridWithColor(MAP_WIDTH, MAP_HEIGHT, floorLight);
 
@@ -248,12 +253,16 @@ namespace MohawkTerminalGame
                 bossAttackInterval = 160;
                 bossAttackIntervalCounter = 0;
 
+                // Make sure inventory state is clean on reboot
+                ResetInventoryState();
+
                 // Set up sword items
                 swordParts[0] = gem;
                 swordParts[1] = shield;
                 swordParts[2] = sword;
 
-                nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+                // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+                nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
 
                 DrawInventory();
 
@@ -310,6 +319,9 @@ namespace MohawkTerminalGame
                     ResetCell(oldPlayerX, oldPlayerY);
                     inputChanged = false;
                 }
+                
+                TryStartDeflect();
+                DeflectTick();
 
                 SwordPartsTick();
 
@@ -686,7 +698,7 @@ namespace MohawkTerminalGame
                 DrawCharacter(playerX, playerY, player);
 
                 // Player takes damage if they are in a cell with an attack (buffer needed?)
-                if (PlayerInDanger() && !playerHasSword)
+                if (PlayerInDanger() && !deflectActive)
                 {
                     ChangeHealth(-1);
                     // Get rid of tiles all around player so they don't immediately take more damage
@@ -1232,6 +1244,9 @@ namespace MohawkTerminalGame
             // Reset boss
             ResetBossAttackingState();
 
+            // Reset inventory
+            ResetInventoryState();
+
             // Clear map manually
             ClearMap();
 
@@ -1517,7 +1532,8 @@ namespace MohawkTerminalGame
 
                 // Reset the timer back to 0 to start the counter over again
                 swordTimer = 0;
-                nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+                // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+                nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
             }
         }
 
@@ -1571,8 +1587,162 @@ namespace MohawkTerminalGame
 
             // Resume item spawn timer
             swordTimer = 0;
-            nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
         }
+
+        // Reset the sword/inventory state
+        void ResetInventoryState()
+        {
+            collectedCounter = 0;
+            swordIndex = 0;
+            playerHasSword = false;
+            swordAnnouncmentShown = false;
+
+            // No items are active on the map
+            swordX = -1;
+            swordY = -1;
+
+            // Restart spawn timer
+            swordTimer = 0;
+            // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
+        }
+
+
+        // ── DEFLECT (Spacebar) ─────────────────────────────────────────────
+        bool deflectActive = false;          // ring currently up?
+        int deflectTimer = 0;                // frames left
+        int deflectDurationFrames = 0;       // set in Setup(): ~2 seconds
+                                             // simple 8-neighbor ring around the player (dx, dy)
+        readonly (int dx, int dy)[] deflectRing =
+        {
+           (-1,  0), (1, 0), (0, -1), (0, 1),
+           (-1, -1), (1,-1), (-1, 1), (1, 1)
+        };
+
+        // what to draw for the ring (change emoji/color if you want)
+        ColoredText deflectOrb = new(@"✨", ConsoleColor.Yellow, ConsoleColor.Black);
+
+        // Try to start the deflect on Spacebar (only if player has the sword & ring not up)
+        void TryStartDeflect()
+        {
+            if (!playerHasSword) return;
+            if (deflectActive) return;
+            if (!Input.IsKeyPressed(ConsoleKey.Spacebar)) return;
+
+            deflectActive = true;
+            deflectTimer = deflectDurationFrames;
+            // draw once immediately so it feels responsive
+            DrawDeflectRing();
+        }
+
+        // Update the deflect ring each frame; handle collision with attacks
+        void DeflectTick()
+        {
+            if (!deflectActive) return;
+
+            // If ring overlaps any active attack tile → SUCCESS: consume sword, advance phase
+            if (DeflectRingHitsAttack())
+            {
+                OnSuccessfulDeflect();
+                return; // OnSuccessfulDeflect turns off the ring
+            }
+
+            // Keep the ring visible while active
+            DrawDeflectRing();
+
+            // Timeout
+            deflectTimer--;
+            if (deflectTimer <= 0)
+            {
+                ClearDeflectRing();
+                deflectActive = false; // keep the sword; player can try again
+            }
+        }
+
+        // TRUE if any ring tile sits on an active attack pixel
+        bool DeflectRingHitsAttack()
+        {
+            foreach (var (dx, dy) in deflectRing)
+            {
+                int lx = playerX + dx;  // logical coords
+                int ly = playerY + dy;
+                if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
+
+                // attacks are tracked in screen columns → x*2
+                if (attackArray[lx * 2, ly]) return true;
+            }
+            return false;
+        }
+
+        // Draw ring around the player (no trails: we reset after timeout or before redraw)
+        void DrawDeflectRing()
+        {
+            foreach (var (dx, dy) in deflectRing)
+            {
+                int lx = playerX + dx;
+                int ly = playerY + dy;
+                if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
+
+                // match tile BG so it blends with floor
+                var under = map.Get(lx, ly);
+                deflectOrb.bgColor = under.bgColor;
+                map.Poke(lx * CELL_W, ly, deflectOrb);
+            }
+        }
+
+        // Restore tiles under the ring
+        void ClearDeflectRing()
+        {
+            foreach (var (dx, dy) in deflectRing)
+            {
+                int lx = playerX + dx;
+                int ly = playerY + dy;
+                if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
+                ResetCell(lx, ly);
+            }
+        }
+
+        // What happens when the ring collides with an attack
+        void OnSuccessfulDeflect()
+        {
+            // clear ring visuals
+            ClearDeflectRing();
+            deflectActive = false;
+
+            // consume sword & push boss forward (your existing logic)
+            playerHasSword = false;
+            bossPhase += 10;
+            bossAttackInterval -= 60;
+            if (bossPhase > 20) gameOver = true;
+
+            // clear announcement + reset inventory for next phase
+            OnSwordDeflected();
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         void CheckIfDead()
         {
