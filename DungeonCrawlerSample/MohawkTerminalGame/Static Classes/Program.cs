@@ -71,11 +71,11 @@ namespace MohawkTerminalGame
             game = new TerminalGame();
 
             // Show the intro screen before setup
-            //game.ShowIntroWithDialogue(); // <- NEW If you want to skip intro comment this out
+            game.ShowIntroWithDialogue(); // <- NEW If you want to skip intro comment this out
 
             // Set up the game
             game.Setup();
-
+            
             // Set up Time helper
             if (Time.AutoStart)
                 Time.Start();

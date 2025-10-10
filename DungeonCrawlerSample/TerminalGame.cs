@@ -32,6 +32,7 @@ namespace MohawkTerminalGame
         private const float INVICIBLE_DURATION = 2f;
 
         // Jonahs Stuff
+        bool bossTakingDamage = false;
         bool hasShownBanterOne = false;
         bool hasShownBanterTwo = false;
         bool testDying = false; // Turn to true if you want to take damage over time
@@ -289,7 +290,17 @@ namespace MohawkTerminalGame
                 int characterX = mapWidth + margin;
                 int characterY = 2;
                 DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
-
+                if (bossTakingDamage)
+                {
+                    DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.White);
+                    Thread.Sleep(500);
+                    DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
+                    Thread.Sleep(500);
+                    DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.White);
+                    Thread.Sleep(500);
+                    DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
+                    bossTakingDamage = false;
+                }
                 if (!isShowingDialogue)
                 {
                     if (!completedPhaseOne)
@@ -328,7 +339,25 @@ namespace MohawkTerminalGame
             //        damageElapsed = 0f;
             //    }
             //}
-
+            int mapWidth = MAP_WIDTH * CELL_W;
+            int margin = 15;
+            int characterX = mapWidth + margin;
+            int characterY = 2;
+            if (bossTakingDamage)
+            {
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.White);
+                Thread.Sleep(125);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
+                Thread.Sleep(125);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.White);
+                Thread.Sleep(125);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
+                Thread.Sleep(125);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.White);
+                Thread.Sleep(125);
+                DrawAsciiCharacter(characterX, characterY, rightCharacterArtIdle, ConsoleColor.Red);
+                bossTakingDamage = false;
+            }
             if (gameOver)
             {
                 //if (bossPhase > 20) DrawWinScreen(elapsedTime);
@@ -401,12 +430,11 @@ namespace MohawkTerminalGame
                             isSpikeVertical = Random.CoinFlip();
 
                             // Draw static right-side ASCII character using this attack
-                            int mapWidth = MAP_WIDTH * CELL_W;
-                            int margin = 15;
-                            int characterX = mapWidth + margin;
-                            int characterY = 2;
+                            //int mapWidth = MAP_WIDTH * CELL_W;
+                            //int margin = 15;
+                            //int characterX = mapWidth + margin;
+                            //int characterY = 2;
                             DrawAsciiCharacter(characterX, characterY, rightCharacterArtSpike, ConsoleColor.Red);
-
                             if (!isShowingDialogue)
                             {
                                 //StartDialogue("I Cast Spike Attack!", ConsoleColor.Red);
@@ -432,12 +460,10 @@ namespace MohawkTerminalGame
                             lightningSize = Random.Integer(7, 13);
 
                             // Draw static right-side ASCII character using this attack
-                            int mapWidth = MAP_WIDTH * CELL_W;
-                            int margin = 15;
-                            int characterX = mapWidth + margin;
-                            int characterY = 2;
-                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtLightning, ConsoleColor.Red);
-
+                            //int mapWidth = MAP_WIDTH * CELL_W;
+                            //int margin = 15;
+                            //int characterX = mapWidth + margin;
+                            //int characterY = 2;
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
@@ -458,10 +484,10 @@ namespace MohawkTerminalGame
                             waveRow = MAP_HEIGHT - 1;
 
                             // Draw static right-side ASCII character using this attack
-                            int mapWidth = MAP_WIDTH * CELL_W;
-                            int margin = 15;
-                            int characterX = mapWidth + margin;
-                            int characterY = 2;
+                            //int mapWidth = MAP_WIDTH * CELL_W;
+                            //int margin = 15;
+                            //int characterX = mapWidth + margin;
+                            //int characterY = 2;
                             DrawAsciiCharacter(characterX, characterY, rightCharacterArtWave, ConsoleColor.Red);
 
                             //StartDialogue("I Cast a Wave!", ConsoleColor.Red);
@@ -1226,6 +1252,9 @@ namespace MohawkTerminalGame
 
         private void RestartGame()
         {
+            elapsedTime = 0;
+            Time.Reset();
+            Time.Start();
             health = maxHealth;
             lastDrawnHealth = -1;
             damageElapsed = 0f;
@@ -1573,6 +1602,7 @@ namespace MohawkTerminalGame
         void OnSwordDeflected()
         {
             enemyHealth= enemyHealth-1;
+            bossTakingDamage = true;
             // Clear the accouncement line
             Terminal.SetCursorPosition(0, hudRowAnnouncment);
             Console.Write(new string(' ', 120));
