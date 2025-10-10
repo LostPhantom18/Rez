@@ -291,7 +291,7 @@ namespace MohawkTerminalGame
 
         public void Execute()
         {
-            
+            if (enemyHealth <= 0) gameOver = true;
             elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
@@ -309,6 +309,7 @@ namespace MohawkTerminalGame
             if (gameOver)
             {
                 if (bossPhase > 20) DrawWinScreen(elapsedTime);
+                //if (enemyHealth <= 0) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -317,7 +318,7 @@ namespace MohawkTerminalGame
             {
                 
                 UpdateDialogue(); // non-blocking dialogue update
-
+                UpdateEnemyHearts();
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
@@ -747,7 +748,7 @@ namespace MohawkTerminalGame
                     bossAttackInterval -= 60;
 
                     // Check if the boss is defeated
-                    if (bossPhase > 30) gameOver = true;
+                    if (enemyHealth<= 0) gameOver = true;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
@@ -1087,76 +1088,6 @@ namespace MohawkTerminalGame
             return lines;
         }
 
-        /*
-        private void ShowBossDialogueRightSide(string text,
-                                       int maxWidth = 60, // characters per line
-                                       int charDelayMs = 8,
-                                       ConsoleColor color = ConsoleColor.White,
-                                       int linePauseMs = 250,
-                                       int startRow = 12,
-                                       int startCol = 38)
-        {
-            int cursorY = startRow;
-            int cursorX = startCol;
-
-            var lines = WrapText(text, maxWidth); // wrap text properly by words
-
-            var originalColor = Terminal.ForegroundColor;
-            Terminal.ForegroundColor = color;
-
-            foreach (var line in lines)
-            {
-                cursorX = startCol; // reset X at start of each line
-                Terminal.SetCursorPosition(cursorX, cursorY);
-
-                foreach (var c in line)
-                {
-                    Terminal.Write(c);
-                    if (charDelayMs > 0) System.Threading.Thread.Sleep(charDelayMs);
-                    cursorX++;
-                }
-
-                cursorY++; // move to next line
-                if (linePauseMs > 0) System.Threading.Thread.Sleep(linePauseMs);
-            }
-
-            Terminal.ForegroundColor = originalColor;
-        }
-        
-        // now implement the three banter methods using the helper
-        private void BanterDialogueOne()
-        {
-            ShowBossDialogueRightSide(
-                "I’ve sent your little sword to another dimension — now all you can do is die by my hand!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Red,
-                linePauseMs: 200
-            );
-        }
-
-        private void BanterDialogueTwo()
-        {
-            ShowBossDialogueRightSide(
-                "You fool; my magic shall stop your attempts on my life before you can even make them!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Yellow,
-                linePauseMs: 200
-            );
-        }
-
-        private void BanterDialogueThree()
-        {
-            ShowBossDialogueRightSide(
-                "Not so fast, you squalid squash! You forgot that I haven’t used my most powerful magic yet — my tidal mastery is absolute!",
-                maxWidth: 60,
-                charDelayMs: 6,
-                color: ConsoleColor.Cyan,
-                linePauseMs: 200
-            );
-        }
-        */
         private void DrawGameOverScreen()
         {
             if (!gameOverScreenDrawn)
@@ -1258,14 +1189,15 @@ namespace MohawkTerminalGame
                 Environment.Exit(0);
             }
         }
-
+        
         private void RestartGame()
         {
             health = maxHealth;
             lastDrawnHealth = -1;
             damageElapsed = 0f;
             gameOver = false;
-
+            enemyHealth = 3;
+            maxHealth = 3;
             // Reset player position
             playerX = MAP_WIDTH / 2;
             playerY = MAP_HEIGHT / 2;
@@ -1315,7 +1247,7 @@ namespace MohawkTerminalGame
             string timeText = Time.DisplayText;
             string posText = $"Pos({playerX + 1},{playerY + 1})";
             string timePosFull = $"Time: {timeText}   {posText}";
-            UpdateEnemyHearts();
+            //UpdateEnemyHearts();
             //string colRowText = $"Is player hit:";
 
             // Only update if changed (or forced)
@@ -1604,7 +1536,9 @@ namespace MohawkTerminalGame
         // Call this when the sword gets used/deflected to resume the randomized spawns of the sword parts
         void OnSwordDeflected()
         {
-            enemyHealth= enemyHealth-1;
+            // Reduce boss health
+            enemyHealth = Math.Max(0, enemyHealth - 1);
+            //UpdateEnemyHearts();
             // Clear the accouncement line
             Terminal.SetCursorPosition(0, hudRowAnnouncment);
             Console.Write(new string(' ', 120));
@@ -1745,33 +1679,11 @@ namespace MohawkTerminalGame
             playerHasSword = false;
             bossPhase += 10;
             bossAttackInterval -= 60;
-            if (bossPhase > 20) gameOver = true;
+           // if (bossPhase > 20) gameOver = true;
 
             // clear announcement + reset inventory for next phase
             OnSwordDeflected();
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
         void CheckIfDead()
