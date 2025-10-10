@@ -88,7 +88,7 @@ namespace MohawkTerminalGame
 };
         string[] rightCharacterArtSpike = new string[]
 {
-"        \\\\ v//      ",
+"        \\\\v//      ",
 "      Á  \\V/       ",
 "    _/-\\_ V        ",
 "    {òʘó} ¡         ",
@@ -451,7 +451,7 @@ namespace MohawkTerminalGame
                             }
                             if (completedPhaseOne == true && completedPhaseTwo == false)
                             {
-                                StartDialogue("And you forget that my spatial manipulation extends beyond creating dimensions now observe, my power!\r\n", ConsoleColor.Red);
+                                StartDialogue("You forget that my spatial manipulation extends beyond creating dimensions! Now, observe my power!\r\n", ConsoleColor.Red);
                             }
                             currentAttack = "lightning";
                             // Randomize where the boss will attack
@@ -464,6 +464,7 @@ namespace MohawkTerminalGame
                             //int margin = 15;
                             //int characterX = mapWidth + margin;
                             //int characterY = 2;
+                            DrawAsciiCharacter(characterX, characterY, rightCharacterArtLightning, ConsoleColor.Red);
                             //StartDialogue("I Cast Lightning Attack!", ConsoleColor.Red);
                         }
                         // Wave attack settings
@@ -475,7 +476,7 @@ namespace MohawkTerminalGame
                             }
                             if (completedPhaseOne == true && completedPhaseTwo == true)
                             {
-                                StartDialogue("Not so fast you squalid squash you forgot that I haven’t used my most powerful magic yet, my tidal mastery is absolute!\r\n", ConsoleColor.Red);
+                                StartDialogue("Not so fast, you squalid squash! You forgot that I haven’t used my most powerful magic yet; my tidal mastery is absolute!\r\n", ConsoleColor.Red);
                             }
                             currentAttack = "wave";
                             // Randomize where the boss will attack
@@ -839,7 +840,8 @@ namespace MohawkTerminalGame
                 Terminal.SetCursorPosition(0, MAP_HEIGHT + 1);
                 Terminal.ResetColor();
                 Terminal.ForegroundColor = ConsoleColor.White;
-                Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
+                // Terminal.WriteLine($"Time: {Time.DisplayText}   Pos({playerX + 1},{playerY + 1})   ");
+                Terminal.WriteLine($"Time: {Time.DisplayText}   ");
                 /*
                 Terminal.ClearLine();
                 Terminal.Write($"Column:{bossAttackColPos} Row:{bossAttackRowPos}");
@@ -1012,7 +1014,7 @@ namespace MohawkTerminalGame
         "Rain pours as you stand before the dark wizard Akunin’s tower. \"The elements seem to sense the gravity of this,\" you think, reflecting on how you arrived here. You recall kneeling before King Koning, who, with worry in his eyes, tasked you, a holy knight, with slaying the vile wizard. It was a mission you knew would come. Now, standing at the door, you take a deep breath, then kick it off its hinges, ready to face the fate ahead.",
         "Prepare yourself for the Wizard Tower challenge!",
         "The boss waits for no one... are you ready?",
-        "WASD to move and in order to parry collect all fragments of the sword and stand in the attack",
+        "Use WASD or the Arrow Keys to move. To parry, collect all fragments of the sword and press [SPACE] while beside an attack.",
             };
 
             int dialogueStartRow = introArt.Length + 2;
@@ -1558,8 +1560,8 @@ namespace MohawkTerminalGame
 
                 // Reset the timer back to 0 to start the counter over again
                 swordTimer = 0;
-                // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
-                nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
+                nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+                // nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
             }
         }
 
@@ -1615,8 +1617,8 @@ namespace MohawkTerminalGame
 
             // Resume item spawn timer
             swordTimer = 0;
-            // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
-            nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
+            nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            // nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
         }
 
         // Reset the sword/inventory state
@@ -1633,8 +1635,8 @@ namespace MohawkTerminalGame
 
             // Restart spawn timer
             swordTimer = 0;
-            // nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
-            nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
+            nextSwordSpawn = Random.Integer(10 * Program.TargetFPS, 20 * Program.TargetFPS + 1);
+            // nextSwordSpawn = Random.Integer(2 * Program.TargetFPS, 4 * Program.TargetFPS + 1);
         }
 
 
@@ -1821,8 +1823,8 @@ namespace MohawkTerminalGame
             string enemyEmpty = new string('♡', Math.Max(0, enemyMaxHealth - enemyHealth));
 
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write($"Enemy Health: {enemyHearts}{enemyEmpty}");
-            //Console.Write("Enemy Health: " + enemyHealth);
+            Console.Write($"Akunin's Health: {enemyHearts}{enemyEmpty}");
+            //Console.Write("Akunin's Health: " + enemyHealth);
             // Restore color
             Console.ForegroundColor = oldColor;
         }
