@@ -291,7 +291,7 @@ namespace MohawkTerminalGame
 
         public void Execute()
         {
-            if (enemyHealth <= 0) gameOver = true;
+            
             elapsedTime += 1f / Program.TargetFPS;
             //BanterDialogueTwo();
 
@@ -309,7 +309,6 @@ namespace MohawkTerminalGame
             if (gameOver)
             {
                 if (bossPhase > 20) DrawWinScreen(elapsedTime);
-                //if (enemyHealth <= 0) DrawWinScreen(elapsedTime);
                 DrawGameOverScreen();
                 return; // Stop all other updates
             }
@@ -318,12 +317,18 @@ namespace MohawkTerminalGame
             {
                 
                 UpdateDialogue(); // non-blocking dialogue update
-                UpdateEnemyHearts();
+
                 // Does input and move player one cell at a time using WASD or the arrows
                 CheckMovePlayer();
 
                 if (inputChanged)
                 {
+
+                    if (deflectActive)
+                    {
+                        ClearDeflectRingAt(oldPlayerX, oldPlayerY);
+                    }
+
                     // Make sure to replace what was under the old player like the floor and dots and stuff
                     ResetCell(oldPlayerX, oldPlayerY);
                     inputChanged = false;
@@ -748,7 +753,7 @@ namespace MohawkTerminalGame
                     bossAttackInterval -= 60;
 
                     // Check if the boss is defeated
-                    if (enemyHealth<= 0) gameOver = true;
+                    if (bossPhase > 30) gameOver = true;
 
                     // Isaac u can uncomment this when the deflect is implemented to clear the announmcnet and also restart the inventory for next phase
                     OnSwordDeflected();
@@ -1088,6 +1093,76 @@ namespace MohawkTerminalGame
             return lines;
         }
 
+        /*
+        private void ShowBossDialogueRightSide(string text,
+                                       int maxWidth = 60, // characters per line
+                                       int charDelayMs = 8,
+                                       ConsoleColor color = ConsoleColor.White,
+                                       int linePauseMs = 250,
+                                       int startRow = 12,
+                                       int startCol = 38)
+        {
+            int cursorY = startRow;
+            int cursorX = startCol;
+
+            var lines = WrapText(text, maxWidth); // wrap text properly by words
+
+            var originalColor = Terminal.ForegroundColor;
+            Terminal.ForegroundColor = color;
+
+            foreach (var line in lines)
+            {
+                cursorX = startCol; // reset X at start of each line
+                Terminal.SetCursorPosition(cursorX, cursorY);
+
+                foreach (var c in line)
+                {
+                    Terminal.Write(c);
+                    if (charDelayMs > 0) System.Threading.Thread.Sleep(charDelayMs);
+                    cursorX++;
+                }
+
+                cursorY++; // move to next line
+                if (linePauseMs > 0) System.Threading.Thread.Sleep(linePauseMs);
+            }
+
+            Terminal.ForegroundColor = originalColor;
+        }
+        
+        // now implement the three banter methods using the helper
+        private void BanterDialogueOne()
+        {
+            ShowBossDialogueRightSide(
+                "I’ve sent your little sword to another dimension — now all you can do is die by my hand!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Red,
+                linePauseMs: 200
+            );
+        }
+
+        private void BanterDialogueTwo()
+        {
+            ShowBossDialogueRightSide(
+                "You fool; my magic shall stop your attempts on my life before you can even make them!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Yellow,
+                linePauseMs: 200
+            );
+        }
+
+        private void BanterDialogueThree()
+        {
+            ShowBossDialogueRightSide(
+                "Not so fast, you squalid squash! You forgot that I haven’t used my most powerful magic yet — my tidal mastery is absolute!",
+                maxWidth: 60,
+                charDelayMs: 6,
+                color: ConsoleColor.Cyan,
+                linePauseMs: 200
+            );
+        }
+        */
         private void DrawGameOverScreen()
         {
             if (!gameOverScreenDrawn)
@@ -1189,15 +1264,14 @@ namespace MohawkTerminalGame
                 Environment.Exit(0);
             }
         }
-        
+
         private void RestartGame()
         {
             health = maxHealth;
             lastDrawnHealth = -1;
             damageElapsed = 0f;
             gameOver = false;
-            enemyHealth = 3;
-            maxHealth = 3;
+
             // Reset player position
             playerX = MAP_WIDTH / 2;
             playerY = MAP_HEIGHT / 2;
@@ -1247,7 +1321,7 @@ namespace MohawkTerminalGame
             string timeText = Time.DisplayText;
             string posText = $"Pos({playerX + 1},{playerY + 1})";
             string timePosFull = $"Time: {timeText}   {posText}";
-            //UpdateEnemyHearts();
+            UpdateEnemyHearts();
             //string colRowText = $"Is player hit:";
 
             // Only update if changed (or forced)
@@ -1536,9 +1610,7 @@ namespace MohawkTerminalGame
         // Call this when the sword gets used/deflected to resume the randomized spawns of the sword parts
         void OnSwordDeflected()
         {
-            // Reduce boss health
-            enemyHealth = Math.Max(0, enemyHealth - 1);
-            //UpdateEnemyHearts();
+            enemyHealth= enemyHealth-1;
             // Clear the accouncement line
             Terminal.SetCursorPosition(0, hudRowAnnouncment);
             Console.Write(new string(' ', 120));
@@ -1574,73 +1646,101 @@ namespace MohawkTerminalGame
         }
 
 
-        // ── DEFLECT (Spacebar) ─────────────────────────────────────────────
-        bool deflectActive = false;          // ring currently up?
-        int deflectTimer = 0;                // frames left
-        int deflectDurationFrames = 0;       // set in Setup(): ~2 seconds
-                                             // simple 8-neighbor ring around the player (dx, dy)
+        // ─────────────────────────────────────────────────────────────────────
+        // DEFLECT
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Is the shiny ring currently showing
+        bool deflectActive = false;
+
+        // How many frames the ring still has left before it disables
+        int deflectTimer = 0;
+
+        // How long the ring lasts in frames (This is setup inside of Setup btw)
+        int deflectDurationFrames = 0;
+
+        // Offsets for the tiles around the player
         readonly (int dx, int dy)[] deflectRing =
         {
-           (-1,  0), (1, 0), (0, -1), (0, 1),
-           (-1, -1), (1,-1), (-1, 1), (1, 1)
+            (-1,  0), (1, 0), (0, -1), (0, 1),
+            (-1, -1), (1,-1), (-1, 1), (1, 1)
         };
 
-        // what to draw for the ring (change emoji/color if you want)
+        // The emoji that draws the ring glow
         ColoredText deflectOrb = new(@"✨", ConsoleColor.Yellow, ConsoleColor.Black);
 
-        // Try to start the deflect on Spacebar (only if player has the sword & ring not up)
+        // If player presses Space and they have the sword, start the ring timer and draw it
         void TryStartDeflect()
         {
-            if (!playerHasSword) return;
-            if (deflectActive) return;
-            if (!Input.IsKeyPressed(ConsoleKey.Spacebar)) return;
+            // Needs the sword to deflect
+            if (!playerHasSword)
+            {
+                return;
+            }
 
+            // If the ring is already on do nothing
+            if (deflectActive)
+            {
+                return;
+            }
+
+            // Only trigger when Spacebar was pressed this frame
+            if (!Input.IsKeyPressed(ConsoleKey.Spacebar))
+            {
+                return;
+            }
+
+            // Turn on the ring and set it
             deflectActive = true;
             deflectTimer = deflectDurationFrames;
-            // draw once immediately so it feels responsive
+
+            // Draw it right away
             DrawDeflectRing();
         }
 
-        // Update the deflect ring each frame; handle collision with attacks
+        // Called every frame while the ring is up
         void DeflectTick()
         {
-            if (!deflectActive) return;
-
-            // If ring overlaps any active attack tile → SUCCESS: consume sword, advance phase
-            if (DeflectRingHitsAttack())
+            // If the ring isn't active nothing to do
+            if (!deflectActive)
             {
-                OnSuccessfulDeflect();
-                return; // OnSuccessfulDeflect turns off the ring
+                return;
             }
 
-            // Keep the ring visible while active
+            // If any of the 8 glow tiles overlaps an active attack tile this counts as a successful deflect
+            if (DeflectRingHitsAttack())
+            {
+                OnSuccessfulDeflect();   // Advances phase, resets ring, handles inventory
+                return;                  // We are done for this frame
+            }
+
+            // Keep the ring visible (redraws it around the player)
             DrawDeflectRing();
 
-            // Timeout
+            // Count down the timer when it hits 0, turn off the ring without consuming the sword
             deflectTimer--;
             if (deflectTimer <= 0)
             {
-                ClearDeflectRing();
-                deflectActive = false; // keep the sword; player can try again
+                ClearDeflectRing();      // Remove the glow from the map
+                deflectActive = false;   // Player can try again later (they still have the sword)
             }
         }
 
-        // TRUE if any ring tile sits on an active attack pixel
+        // Check the 8 tiles around the player if any of them sits on an attack return true.
         bool DeflectRingHitsAttack()
         {
             foreach (var (dx, dy) in deflectRing)
             {
-                int lx = playerX + dx;  // logical coords
-                int ly = playerY + dy;
+                int lx = playerX + dx;  // tile X
+                int ly = playerY + dy;  // tile Y
                 if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
 
-                // attacks are tracked in screen columns → x*2
-                if (attackArray[lx * 2, ly]) return true;
+                if (attackArray[lx * CELL_W, ly]) return true;
             }
             return false;
         }
 
-        // Draw ring around the player (no trails: we reset after timeout or before redraw)
+        // Draw the glow emoji on the tiles around the player
         void DrawDeflectRing()
         {
             foreach (var (dx, dy) in deflectRing)
@@ -1649,14 +1749,12 @@ namespace MohawkTerminalGame
                 int ly = playerY + dy;
                 if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
 
-                // match tile BG so it blends with floor
-                var under = map.Get(lx, ly);
-                deflectOrb.bgColor = under.bgColor;
+                // Draw the emoji at the correct on-screen position (remember: CELL_W=2)
                 map.Poke(lx * CELL_W, ly, deflectOrb);
             }
         }
 
-        // Restore tiles under the ring
+        // Remove the glow by restoring the original floor tiles under the 8 neighbors
         void ClearDeflectRing()
         {
             foreach (var (dx, dy) in deflectRing)
@@ -1664,27 +1762,46 @@ namespace MohawkTerminalGame
                 int lx = playerX + dx;
                 int ly = playerY + dy;
                 if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
+
+                // Put the original floor/wall tile back
                 ResetCell(lx, ly);
             }
         }
 
-        // What happens when the ring collides with an attack
+        // Called when the ring touches an attack
         void OnSuccessfulDeflect()
         {
-            // clear ring visuals
             ClearDeflectRing();
             deflectActive = false;
 
-            // consume sword & push boss forward (your existing logic)
+            // Clear the attack where the player is
+            ResetBossAttackTiles(playerX * CELL_W, playerY);
+
+            // Also clear neighbors so the area is safe
+            foreach (var (dx, dy) in deflectRing)
+            {
+                ResetBossAttackTiles((playerX + dx) * CELL_W, playerY + dy);
+            }
+               
             playerHasSword = false;
             bossPhase += 10;
             bossAttackInterval -= 60;
-           // if (bossPhase > 20) gameOver = true;
+            if (bossPhase > 30) gameOver = true;
 
-            // clear announcement + reset inventory for next phase
             OnSwordDeflected();
         }
 
+        // Clear the ring in older positions
+        void ClearDeflectRingAt(int centerX, int centerY)
+        {
+            foreach (var (dx, dy) in deflectRing)
+            {
+                int lx = centerX + dx;
+                int ly = centerY + dy;
+                if (lx < 0 || lx >= MAP_WIDTH || ly < 0 || ly >= MAP_HEIGHT) continue;
+                ResetCell(lx, ly);
+            }
+        }
 
         void CheckIfDead()
         {
