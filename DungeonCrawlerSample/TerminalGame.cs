@@ -182,8 +182,8 @@ namespace MohawkTerminalGame
         int bossFinalPhaseCounter;          // Counter during the final boss phase to make attacks more frequent
         bool playerHasSword;                // If the player has the sword
 
-        public int enemyHealth = 2;
-        public int enemyMaxHealth = 2;
+        public int enemyHealth = 3;
+        public int enemyMaxHealth = 3;
         // ─────────────────────────────────────────────────────────────────────
         // ENGINE STUFF
         // ─────────────────────────────────────────────────────────────────────
