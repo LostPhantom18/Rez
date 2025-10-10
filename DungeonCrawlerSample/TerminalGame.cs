@@ -936,14 +936,15 @@ namespace MohawkTerminalGame
             {
         "Rain pours as you stand before the dark wizard Akunin’s tower. \"The elements seem to sense the gravity of this,\" you think, reflecting on how you arrived here. You recall kneeling before King Koning, who, with worry in his eyes, tasked you, a holy knight, with slaying the vile wizard. It was a mission you knew would come. Now, standing at the door, you take a deep breath, then kick it off its hinges, ready to face the fate ahead.",
         "Prepare yourself for the Wizard Tower challenge!",
-        "The boss waits for no one... are you ready?"
+        "The boss waits for no one... are you ready?",
+        "WASD to move and in order to parry collect all fragments of the sword and stand in the attack",
             };
 
             int dialogueStartRow = introArt.Length + 2;
             int dialogueX = 25;
             int maxLineWidth = 70; // max chars per line for terminal
 
-            double totalTime = 14; // seconds
+            double totalTime = 4; // seconds
             double timePerLine = totalTime / dialogue.Length;
 
             foreach (string paragraph in dialogue)
